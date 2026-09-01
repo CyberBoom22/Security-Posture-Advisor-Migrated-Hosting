@@ -98,9 +98,9 @@ export const SupportView: React.FC = () => {
           * so the Venmo tab gets no window.opener handle back to this page.
           *
           * Hover styling is done with mouse handlers rather than CSS because
-          * this element is styled inline; the handlers assign through the
+          * this element is styled with a style prop; the handlers assign via the
           * CSSOM, which the Content-Security-Policy permits without
-          * 'unsafe-inline'. A :hover rule in index.css would be the tidier
+          * an inline-style allowance. A :hover rule in index.css would be tidier
           * approach if this pattern spreads.
           */}
         <div>

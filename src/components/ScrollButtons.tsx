@@ -21,8 +21,8 @@ export const ScrollButtons: React.FC = () => {
   return (
     // Positioning is set here rather than in CSS so the control stays anchored
     // regardless of which view is mounted. React sets these through the CSSOM,
-    // not as an inline style attribute, so the Content-Security-Policy applies
-    // to it — style-src does not need 'unsafe-inline' for this to work.
+    // not as a style attribute in the markup, so the Content-Security-Policy
+    // permits it without style-src needing an inline-style allowance.
     <div
       style={{
         position: 'fixed',

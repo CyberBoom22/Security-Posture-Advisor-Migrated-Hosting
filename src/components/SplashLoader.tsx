@@ -92,7 +92,7 @@ export const SplashLoader: React.FC = () => {
           boxShadow: '0 8px 32px rgba(26, 26, 26, 0.04)',
         }}
       >
-        {/* The orbit ring spins via CSS; the logo draws itself in over ~1.1s. */}
+        {/* The orbit halo spins via CSS; the logo draws itself in over ~1.1s. */}
         <div
           style={{
             position: 'relative',

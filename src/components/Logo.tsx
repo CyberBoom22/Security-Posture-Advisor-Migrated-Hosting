@@ -2,8 +2,8 @@ import React from 'react';
 
 /**
  * The Security Hub mark: a hexagonal shield crossed by a gold stroke and a
- * darker diagonal. The same three shapes are duplicated as an inline SVG
- * favicon in index.html, so a change here should be mirrored there.
+ * darker diagonal. The same three shapes are duplicated as the SVG favicon
+ * embedded in index.html, so a change here should be mirrored there.
  */
 interface LogoProps {
   size?: number;
@@ -28,7 +28,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 34, className = '', isAnimate
         className={className}
         fill="none"
       >
-        {/* Shield outline: drawn first, over 0.7s. */}
+        {/* Shield perimeter: drawn first, over 0.7s. */}
         <polygon
           points="32,6 54,19 54,45 32,58 10,45 10,19"
           fill="none"

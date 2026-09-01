@@ -1,4 +1,22 @@
+/*
+ * Global stylesheet, imported by main.tsx so Vite emits it as a single
+ * fingerprinted asset.
+ *
+ * Only shared and stateful styling lives here — resets, typography, the
+ * design tokens repeated across views, keyframes, and anything needing a
+ * pseudo-class or media query that style props cannot express. Most
+ * one-off layout is set as React style props in the components themselves.
+ *
+ * The palette, repeated throughout rather than held in custom properties:
+ *   #F9F7F2  page background      #FFFDF9  raised card surface
+ *   #F4F0E8  inset / track        #1A1A1A  primary text and dark fills
+ *   #4A4A4A  body text            #8C8275 / #767064  muted labels
+ *   #C5A059  gold accent          #A6823C  gold, pressed
+ */
+
 @import "tailwindcss";
+
+/* --- Reset and base ------------------------------------------------------ */
 
 * {
   box-sizing: border-box;
@@ -22,6 +40,10 @@
   border: 0;
 }
 
+/* overflow-x: hidden is the last line of defence against a stray wide element
+ * forcing the whole page sideways. Wide content is expected to scroll inside
+ * its own container instead — see .table-scroll-container below — and AutoFit
+ * scales the document down when it still does not fit. */
 html, body {
   max-width: 100%;
   overflow-x: hidden;
@@ -33,6 +55,9 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Headings run in a serif face against the sans-serif body, which is what
+ * gives the site its editorial rather than SaaS-dashboard feel. Discretionary
+ * ligatures are enabled deliberately for that voice. */
 h1, h2, h3, .editorial-heading {
   font-family: 'Newsreader', 'Spectral', serif;
   font-feature-settings: "liga" 1, "dlig" 1;
@@ -42,6 +67,8 @@ img, svg {
   max-width: 100%;
 }
 
+/* Two-up layout, collapsed to a single column under 680px in the media query
+ * below. */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -52,6 +79,9 @@ img, svg {
   min-width: 0;
 }
 
+/* Cost breakdown rows have a hard minimum width (.costrow) because the columns
+ * stop being readable when compressed, so the wrapper scrolls rather than
+ * letting them squeeze. */
 .costwrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -61,6 +91,9 @@ img, svg {
   min-width: 540px;
 }
 
+/* The single breakpoint in the file. Most responsiveness comes from the grid
+ * and flex layouts themselves plus AutoFit; only these two need an explicit
+ * override. */
 @media (max-width: 680px) {
   .two-col {
     grid-template-columns: 1fr;
@@ -74,7 +107,10 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Global Shell / Tabs - Editorial Refinement */
+/* --- Application tabs ----------------------------------------------------
+ * The main navigation in App.tsx. `.on` marks the active tab; the hover rule
+ * excludes it so the active tab does not shift under the cursor.
+ */
 .apptab {
   font-family: 'Inter', sans-serif;
   font-size: 11px;
@@ -107,7 +143,10 @@ html {
   background: #F4F0E8;
 }
 
-/* Scroll Buttons */
+/* --- Scroll controls -----------------------------------------------------
+ * The fixed jump-to-top/bottom buttons. The jolt keyframes nudge the arrow in
+ * its travel direction on hover, hinting at what the button will do.
+ */
 .scrollbtn {
   border-radius: 4px;
   border: 1px solid rgba(26, 26, 26, 0.2);
@@ -161,7 +200,14 @@ html {
   transform: scale(0.92);
 }
 
-/* Splash Loader - Editorial Aesthetic */
+/* --- Splash screen -------------------------------------------------------
+ * Styling for SplashLoader. `drawin` animates stroke-dashoffset to zero, which
+ * is what draws the logo on; `pulse-ring` runs the orbit halo behind it.
+ *
+ * The transition on .loader-out must stay shorter than the 550ms gap between
+ * that class being applied and the component unmounting, or the fade is cut
+ * off mid-way.
+ */
 @keyframes drawin {
   to {
     stroke-dashoffset: 0;
@@ -278,7 +324,10 @@ html {
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Advisor View Styles */
+/* --- Advisor -------------------------------------------------------------
+ * The intake form: segmented controls, range sliders, numeric readouts, the
+ * submit button, and the recommendation rows it produces.
+ */
 .field-label {
   font-size: 10.5px;
   font-weight: 700;
@@ -405,7 +454,9 @@ input[type=range] {
   letter-spacing: 0.04em;
 }
 
-/* Compare View Styles */
+/* --- Comparison tables ---------------------------------------------------
+ * The Compare tab: its category tabs, cards, and the pricing matrices.
+ */
 .tabbtn {
   font-family: 'Inter', sans-serif;
   font-size: 11.5px;
@@ -511,7 +562,10 @@ td.name {
   box-shadow: 0 1px 3px rgba(26, 26, 26, 0.02);
 }
 
-/* Styled horizontal scrollbars */
+/* Horizontal scrollbars are styled rather than left to the browser because
+ * they are load-bearing here: several tables are wider than the viewport, and
+ * a hairline default scrollbar leaves readers unaware there is more to see.
+ * These are -webkit- prefixed, so Firefox falls back to its own scrollbar. */
 .table-scroll-container::-webkit-scrollbar,
 .scroll::-webkit-scrollbar,
 .costwrap::-webkit-scrollbar {
@@ -538,7 +592,9 @@ td.name {
   background: #A6823C;
 }
 
-/* Sticky first column for matrices to keep context when scrolling on mobile */
+/* The first column stays pinned while the rest scrolls sideways, so the row's
+ * product name stays visible. Without it, a reader scrolled to the renewal
+ * column cannot tell which product a figure belongs to. */
 .matrix-table {
   width: 100%;
   border-collapse: collapse;

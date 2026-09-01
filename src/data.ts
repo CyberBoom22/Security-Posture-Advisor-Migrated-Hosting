@@ -1,3 +1,40 @@
+/**
+ * Every fact this site states lives in this file.
+ *
+ * It is hand-maintained from vendors' own public pricing and documentation.
+ * Nothing here is fetched at runtime — there is no API, no build-time scrape
+ * and no backend — so these figures are a point-in-time snapshot and drift as
+ * vendors change their pricing. That is why the UI repeatedly tells readers to
+ * confirm on the provider's own page before buying.
+ *
+ * Two conventions run through the whole file and carry the site's argument:
+ *
+ *   intro vs renew — almost every price is a pair. The intro figure is the
+ *   advertised first-term price; renew is what the same plan costs afterwards,
+ *   which is frequently two to three times higher. Displaying only the intro
+ *   price is the industry norm this site exists to push back on, so any new
+ *   entry must carry both.
+ *
+ *   adultCap vs totalSeats — "family" plans advertise a seat count but often
+ *   cap how many of those seats can be adults with independent vaults. A plan
+ *   sold as six seats may host only two adults. Keeping the two numbers apart
+ *   is what lets the advisor reject a plan that nominally fits a household but
+ *   cannot actually seat its grown-ups.
+ */
+
+/**
+ * Security features a carrier or ISP already bundles.
+ *
+ * The advisor subtracts these from what it recommends buying, which is the
+ * core of the "most households pay twice" argument. The distinction between
+ * mobilePerks and networkPerks matters: a carrier app protects only the phones
+ * it is installed on, whereas router-level filtering covers everything on the
+ * network including devices that cannot run an agent.
+ *
+ * isISP marks providers that supply home internet, since only those can offer
+ * network-level protection. hq/origin/flag/legalFramework feed the
+ * jurisdiction disclosures rather than the recommendation itself.
+ */
 export interface CarrierInfo {
   isISP: boolean;
   mobilePerks: string[];
@@ -9,6 +46,14 @@ export interface CarrierInfo {
   legalFramework: string;
 }
 
+/**
+ * A single statute, regulation or court decision, cited so a reader can check
+ * it rather than take the summary on trust — hence officialUrl and
+ * officialDocumentCitation alongside the plain-language summary.
+ *
+ * impactOnSaaS is the part that matters to a buyer: what the law actually
+ * means for data held by a provider subject to it.
+ */
 export interface LegalReference {
   id: string;
   code: string;
@@ -21,6 +66,20 @@ export interface LegalReference {
   impactOnSaaS: string;
 }
 
+/**
+ * Where a provider is legally reachable, and by whom.
+ *
+ * allianceCategory places the provider on the intelligence-sharing spectrum
+ * (5/9/14 Eyes, or outside it), with 'Swiss' called out separately because
+ * Switzerland's regime is materially different from the rest of Non-14-Eyes.
+ *
+ * userImpact is split by the reader's own location, because the same provider
+ * carries different exposure for a US, EU or other user.
+ *
+ * zeroKnowledgeMitigation is optional and load-bearing: where a provider holds
+ * no key capable of decrypting user data, a subpoena reaches far less, which
+ * can outweigh an unfavourable jurisdiction entirely.
+ */
 export interface JurisdictionInfo {
   origin: string;
   hq: string;
@@ -40,7 +99,12 @@ export interface JurisdictionInfo {
   zeroKnowledgeMitigation?: string;
 }
 
-// Master Directory of Official Legal Codes, Statutes & Precedents
+/*
+ * Shared statute directory, keyed by short name.
+ *
+ * Providers reference these entries rather than restating the law, so a
+ * correction to a statute propagates everywhere it is cited.
+ */
 export const OFFICIAL_LEGAL_STATUTES: Record<string, LegalReference> = {
   CLOUD_ACT: {
     id: 'cloud_act',
@@ -275,6 +339,11 @@ export const OFFICIAL_LEGAL_STATUTES: Record<string, LegalReference> = {
   },
 };
 
+/*
+ * Carriers and ISPs the intake form offers, keyed by display name.
+ *
+ * Adding one here is enough for it to appear in the advisor's dropdown.
+ */
 export const CARRIERS: Record<string, CarrierInfo> = {
   "T-Mobile": {
     isISP: false,
@@ -338,6 +407,23 @@ export const CARRIERS: Record<string, CarrierInfo> = {
   },
 };
 
+/*
+ * ---------------------------------------------------------------------------
+ * Advisor recommendation pools
+ *
+ * The lists below are what the advisor chooses from when building a plan. They
+ * are deliberately short and opinionated — one defensible pick per household
+ * shape — unlike the comparison tables further down, which aim for coverage.
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * A password manager plan, sized by household.
+ *
+ * adultCap is the number of adults who get their own vault; totalSeats is the
+ * advertised seat count. The advisor matches on adultCap first, because a plan
+ * with spare seats but no room for a second adult does not fit a couple.
+ */
 export interface VaultPick {
   adultCap: number;
   totalSeats: number;
@@ -362,10 +448,20 @@ export const VAULT_PICKS: VaultPick[] = [
     why: "Up to 10 members regardless of age; bundles a basic VPN." },
 ];
 
+// Fallbacks quoted when the budget will not cover a paid plan, or when the
+// free tier is genuinely sufficient for the household described.
 export const FREE_TIERS = "Bitwarden Free, Proton Pass Free, or NordPass Free";
 export const FREE_TIER_URL = "https://bitwarden.com/pricing/";
+// Named because these VPNs' built-in blockers can stand in for a separate
+// ad/tracker blocker, removing one line item from a recommended plan.
 export const VPN_BLOCKERS = "Proton VPN's NetShield, NordVPN's Threat Protection, or Surfshark's CleanWeb";
 
+/**
+ * An all-in-one security suite.
+ *
+ * deviceCap of null means the vendor advertises unlimited devices, which the
+ * UI renders as "unlimited" rather than as a missing value.
+ */
 export interface AVSuite {
   name: string;
   deviceCap: number | null;
@@ -386,6 +482,13 @@ export const AV_SUITES: AVSuite[] = [
     note: "5 devices; bundles VPN + password manager." },
 ];
 
+/**
+ * A VPN plan.
+ *
+ * routerCapable decides whether the whole household can be covered by one
+ * router installation instead of per-device apps — the difference between one
+ * subscription and one per device, and often the deciding factor.
+ */
 export interface VPNChoice {
   id: string;
   name: string;
@@ -407,6 +510,26 @@ export const VPN_CHOICES: VPNChoice[] = [
     note: "10 devices; NetShield blocks ads + malware. Open-source, Swiss privacy. Intro is the 2-year Plus rate." },
 ];
 
+/*
+ * ---------------------------------------------------------------------------
+ * Comparison tables
+ *
+ * Everything below feeds the Compare tab. These aim for breadth rather than a
+ * single recommendation, and carry the auditing, jurisdiction and limitations
+ * detail the advisor does not need but a reader comparing options does.
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * A standalone password manager, as shown in the comparison matrix.
+ *
+ * Individual and family pricing are held as four separate fields rather than a
+ * nested pair, because the table renders both tiers side by side.
+ *
+ * audited and openSource are the two claims most often asserted loosely in
+ * marketing, so they are stored as booleans and stated plainly. `limits` is
+ * where the caveats vendors leave out of their own comparison pages go.
+ */
 export interface PWManager {
   name: string;
   url: string;
@@ -611,6 +734,16 @@ export const PW_MANAGERS: PWManager[] = [
   },
 ];
 
+/**
+ * An all-in-one suite in the comparison matrix.
+ *
+ * `includes` uses `boolean | string` for several features on purpose: a plain
+ * true/false is often a lie about what is bundled, so a string carries the
+ * qualification ("US only", "limited") where a bare boolean would mislead.
+ *
+ * kidsNote records how child seats are treated, which differs enough between
+ * vendors that it cannot be derived from adultCap and the seat count.
+ */
 export interface Suite {
   name: string;
   url: string;
@@ -801,6 +934,16 @@ export const SUITES: Suite[] = [
   },
 ];
 
+/**
+ * A VPN in the comparison matrix.
+ *
+ * Four prices are kept because VPN pricing is the most misleading in this
+ * space: introMo is the advertised monthly rate, but it is only available on a
+ * multi-year prepay, so firstBill is what actually leaves the account on day
+ * one, renewYr is the annual cost thereafter, and monthlyMo is the true
+ * month-to-month rate. Quoting only introMo is the practice this table exists
+ * to counter.
+ */
 export interface VPNCompareItem {
   name: string;
   url: string;
@@ -1042,6 +1185,13 @@ export const VPN_COMPARE: VPNCompareItem[] = [
   },
 ];
 
+/**
+ * An antivirus product in the comparison matrix.
+ *
+ * introMoNote is optional and used where a vendor advertises a monthly figure
+ * that does not correspond to the annual price shown, so the discrepancy can
+ * be stated rather than silently reconciled.
+ */
 export interface AVCompareItem {
   name: string;
   url: string;
