@@ -1,12 +1,19 @@
-# Cloudflare Pages response headers.
-# Applied to every response; the most specific matching rule wins per header.
+# Cloudflare response headers.
+#
+# The zone sets its own security headers on the custom domains, so the values
+# below are kept identical to the zone's. Where both apply the browser then
+# sees the same value twice rather than two competing ones. These headers are
+# not redundant: *.workers.dev bypasses the zone entirely, so on that hostname
+# this file is the only thing setting them.
 
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
-  Referrer-Policy: no-referrer
-  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
-  Strict-Transport-Security: max-age=63072000
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 # Vite fingerprints these filenames, so they can be cached permanently.
 /assets/*
