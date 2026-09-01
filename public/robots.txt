@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://secposadv.xavierboone.us/sitemap.xml
