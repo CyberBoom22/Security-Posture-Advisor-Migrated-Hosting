@@ -4,6 +4,24 @@
   box-sizing: border-box;
 }
 
+/* Hidden visually, still read by screen readers and crawlers.
+   This lives in the stylesheet rather than a style attribute on purpose:
+   the zone serves a Content-Security-Policy whose style-src omits
+   'unsafe-inline', so a style attribute is refused and the block would
+   render as visible text at the top of the page. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: normal;
+  border: 0;
+}
+
 html, body {
   max-width: 100%;
   overflow-x: hidden;
