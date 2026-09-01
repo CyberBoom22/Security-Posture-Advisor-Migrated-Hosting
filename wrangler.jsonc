@@ -1,0 +1,26 @@
+{
+  // Must match the Worker name in the Cloudflare dashboard exactly.
+  // Workers Builds fails the build immediately if these differ.
+  "name": "security-posture-advisor-migrated-hosting",
+  "compatibility_date": "2026-09-01",
+
+  // Entry point. It only canonicalises the hostname; everything else is
+  // handed straight to the asset store.
+  "main": "./worker/index.js",
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+
+    // Static assets are served without invoking Worker code by default, so
+    // "/" would never reach the redirect. Run the Worker first so every
+    // request passes through it.
+    "run_worker_first": true,
+
+    // "none" returns a genuine 404 for unknown paths. Do not change this to
+    // "single-page-application" unless a client-side router is added: this
+    // app renders one page, so a catch-all would answer every unknown URL
+    // with 200 and the full app, which reads as a soft 404 to search engines.
+    "not_found_handling": "none"
+  }
+}

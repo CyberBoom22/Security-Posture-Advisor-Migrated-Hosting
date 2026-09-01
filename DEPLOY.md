@@ -1,155 +1,145 @@
 # Deploying Security Hub
 
-This app is a **static single-page site**. It builds to plain HTML, CSS and JS in
-`dist/`, makes no server-side calls, and needs no API keys or runtime secrets at
-all. Any static host can serve it; the setup below uses Cloudflare Pages with
-GitHub as the source of truth.
+This app is a **static single-page site**. It builds to plain HTML, CSS and JS
+in `dist/`, makes no server-side calls, and needs no API keys or runtime secrets
+at all.
 
-## What the build produces
+## How it deploys
 
-```
+Cloudflare's **Git integration** builds and publishes this repository directly.
+Pushing to `main` is the deploy: Cloudflare clones the repo, runs the build, and
+serves the result as a Worker with static assets. There are no deploy
+credentials in GitHub, and nothing in this repo triggers the deploy.
+
+| Setting                | Value           |
+| ---------------------- | --------------- |
+| Build command          | `npm run build` |
+| Build output directory | `dist`          |
+| Production branch      | `main`          |
+
+Cloudflare reads `.nvmrc` for the Node version.
+
+`.github/workflows/ci.yml` type-checks and builds on pushes and pull requests.
+It does **not** deploy — it exists so a commit that fails to compile is caught
+in the pull request rather than turning into a failed Cloudflare build.
+
+To reproduce the build locally:
+
+```bash
 npm ci        # install exactly what package-lock.json pins
 npm run lint  # tsc --noEmit
 npm run build # -> dist/
 ```
 
-`dist/` contains `index.html`, fingerprinted files under `dist/assets/`, and the
-`_headers` file copied from `public/`.
+`dist/` contains `index.html`, fingerprinted files under `dist/assets/`, and
+`_headers`, `robots.txt` and `sitemap.xml` copied from `public/`.
 
 ---
 
-## Option A — GitHub Actions deploys to Cloudflare Pages (configured here)
+## Putting it on sec-pos-advisor.xavierboone.us
 
-`.github/workflows/deploy.yml` builds on every push to `main` and publishes
-`dist/` to Cloudflare Pages. Pull requests build and type-check but do **not**
-deploy, so the credentials are never exposed to a forked PR.
+`xavierboone.us` is already served by Cloudflare nameservers
+(`aurora`/`morgan.ns.cloudflare.com`), so there is no nameserver migration to
+do. As of this writing the zone had no records on `sec-pos-advisor`, no
+wildcard, and no `MX`, so nothing conflicts with the setup below and no mail
+routing is at risk.
 
-To turn it on:
-
-**1. Create the Pages project.** In the Cloudflare dashboard go to
-*Workers & Pages → Create → Pages → Upload assets*, name the project
-`security-posture-advisor`, and create it. (The name must match
-`--project-name` in the workflow. Uploading a placeholder once is enough — the
-workflow takes over from there.)
-
-**2. Create an API token.** *My Profile → API Tokens → Create Token → Custom
-token* with these permissions:
-
-| Scope   | Permission            | Access |
-| ------- | --------------------- | ------ |
-| Account | Cloudflare Pages      | Edit   |
-
-**3. Find your account ID.** It is in the URL of the Cloudflare dashboard
-(`dash.cloudflare.com/<account-id>/...`) and on the Workers & Pages overview.
-
-**4. Add both as GitHub secrets.** In the repo: *Settings → Secrets and
-variables → Actions → New repository secret*.
-
-| Secret name             | Value                     |
-| ----------------------- | ------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | the token from step 2     |
-| `CLOUDFLARE_ACCOUNT_ID` | the account ID from step 3 |
-
-**5. Merge to `main`.** The workflow runs and the site goes live at
-`https://security-posture-advisor.pages.dev`.
-
-## Option B — Cloudflare Pages builds it directly (no secrets)
-
-If you would rather not manage tokens, connect the repo in Cloudflare instead
-and delete `.github/workflows/deploy.yml`:
-
-*Workers & Pages → Create → Pages → Connect to Git*, pick this repo, then set:
-
-| Setting               | Value           |
-| --------------------- | --------------- |
-| Framework preset      | Vite            |
-| Build command         | `npm run build` |
-| Build output directory | `dist`         |
-| Production branch     | `main`          |
-
-Cloudflare reads `.nvmrc` for the Node version. Every push to `main` redeploys;
-every other branch gets its own preview URL.
-
-Option A gives you type-checking as a merge gate and keeps the build definition
-in the repo. Option B is fewer moving parts. Use one, not both — two systems
-deploying the same project will fight over the deployment history.
-
----
-
-## Putting it on secposadv.xavierboone.us
-
-The target hostname is **`secposadv.xavierboone.us`**, and `xavierboone.us` is
-already served by Cloudflare nameservers (`aurora`/`morgan.ns.cloudflare.com`),
-so there is no nameserver migration to do. As of this writing the zone had no
-records on `secposadv`, no wildcard, and no `MX`, so nothing conflicts with the
-setup below and no mail routing is at risk.
-
-Because this is a dedicated subdomain rather than the apex, there is also no
-apex-versus-`www` split to canonicalise — `secposadv.xavierboone.us` is the one
-and only public hostname, and it is what `<link rel="canonical">`,
-`og:url`, `robots.txt` and `sitemap.xml` in this repo already point at.
+Because this is a dedicated subdomain rather than the apex, there is no
+apex-versus-`www` split to canonicalise. `sec-pos-advisor.xavierboone.us` is the
+one public hostname, and it is what `<link rel="canonical">`, `og:url`,
+`robots.txt` and `sitemap.xml` in this repo point at.
 
 ### Attach the hostname
 
-In *Workers & Pages* → the `security-posture-advisor` project → *Custom domains*
-→ *Set up a domain*, enter `secposadv.xavierboone.us` and confirm.
+This is a **Worker**, not a Pages project, so the custom domain lives under the
+Worker's own settings. It is also not done from the zone's DNS tab: you are not
+creating a subdomain record and pointing the site at it, you are telling the
+Worker to claim the hostname, and Cloudflare writes the DNS record for you.
 
-Cloudflare creates the `CNAME` itself and issues the TLS certificate, normally
-within a few minutes. Two rules:
+*Workers & Pages* → the Worker → *Settings* → *Domains & Routes* → *Add* →
+*Custom Domain* → enter `sec-pos-advisor.xavierboone.us` → *Add Custom Domain*.
 
-- **Do not pre-create the DNS record.** An `A`, `AAAA` or `CNAME` already
-  sitting on `secposadv` conflicts with the one Pages needs to add and blocks
-  certificate issuance. The hostname is currently empty, so simply leave it
-  alone and let Pages claim it.
-- **Leave the record proxied** (orange cloud in the DNS tab). Grey-cloud
-  DNS-only mode bypasses Cloudflare, and the Pages project never sees the
-  request.
+Cloudflare creates the DNS record and issues the TLS certificate, normally
+within a few minutes.
+
+**Do not pre-create the DNS record.** Cloudflare will not attach a custom domain
+to a hostname that already has a `CNAME` record on it. The hostname is currently
+empty, so leave it alone and let the Worker claim it. If a record does already
+exist, delete it first.
 
 ### Check the TLS mode
 
 *SSL/TLS → Overview* for `xavierboone.us` must be **Full (strict)**. A zone set
-to **Flexible** puts visitors in an infinite redirect loop against Pages, which
-always serves HTTPS. This is the most common cause of a custom domain that
-comes up as a redirect loop immediately after setup, and the setting lives on
-the zone, so it affects every hostname under `xavierboone.us`.
+to **Flexible** puts visitors in an infinite redirect loop, because Cloudflare
+always serves this site over HTTPS. The setting is zone-wide, so it affects
+every hostname under `xavierboone.us`.
 
 ### Verify
 
-Once the certificate is issued:
-
 ```bash
-curl -sSI https://secposadv.xavierboone.us | head -n 1   # expect: HTTP/2 200
-curl -sS  https://secposadv.xavierboone.us/robots.txt    # expect: the sitemap line
+curl -sSI https://sec-pos-advisor.xavierboone.us | head -n 1  # expect: HTTP/2 200
+curl -sS  https://sec-pos-advisor.xavierboone.us/robots.txt   # expect: the sitemap line
 ```
 
-The `security-posture-advisor.pages.dev` URL keeps working alongside the custom
-domain. Because it serves identical content, search engines can index both and
-split the ranking. The canonical tag in `index.html` points at
-`secposadv.xavierboone.us`, which resolves that for any crawler that honours it;
-to be certain, disable the `pages.dev` alias under the project's
-*Settings → General* once the custom domain is confirmed working.
+### The second subdomain
 
-### If the domain ever changes
+`securitypostureadvisor.xavierboone.us` is also attached to this Worker. It is
+**301 redirected** to `sec-pos-advisor.xavierboone.us` by `worker/index.js`,
+so the two hostnames cannot end up indexed as competing copies of the site.
 
-The hostname is written into four places: `<link rel="canonical">` and
-`og:url` in `index.html`, `public/robots.txt`, and `public/sitemap.xml`. Update
-all four together, or search engines will keep being pointed at the old address.
+The redirect lives in the Worker rather than in a zone Redirect Rule so that it
+is versioned with the code and deploys with it. Two consequences worth knowing:
+
+- `assets.run_worker_first` is `true`. Static assets are normally served
+  without invoking Worker code at all, so without this the redirect would
+  never run for `/` or for any path that matches a real file. The cost is that
+  every request now invokes the Worker, which counts against the Workers
+  request quota.
+- `*.workers.dev` is deliberately **not** redirected. It bypasses the zone
+  entirely, which makes it the way back in if a custom domain or the zone
+  configuration breaks.
+
+To change the canonical hostname, update `CANONICAL_HOST` in `worker/index.js`
+alongside the four places listed at the bottom of this file.
+
+### Retire the workers.dev URL
+
+The Worker also answers on its `*.workers.dev` subdomain, serving identical
+content. Search engines can index both and split the ranking between them. The
+canonical tag points at `sec-pos-advisor.xavierboone.us`, which handles any
+crawler that honours it; to remove the duplicate outright, disable the
+`workers.dev` route under *Settings* → *Domains & Routes* once the custom domain
+is confirmed working.
 
 ---
 
 ## Notes on this repo
 
+- **The hostname is written into four places:** `<link rel="canonical">` and
+  `og:url` in `index.html`, `public/robots.txt`, and `public/sitemap.xml`.
+  Change all four together, or crawlers keep being pointed at the old address.
 - **No `_redirects` file, deliberately.** The app has no client-side router, so
   every real page is served from `/`. An SPA catch-all (`/* /index.html 200`)
   would answer unknown URLs with a `200` and the full app, which reads as a soft
-  404 to search engines. Letting Cloudflare return a genuine 404 is correct here.
-  If you later add a router, add `public/_redirects` at that point.
+  404 to search engines. Returning a genuine 404 is correct here. If you later
+  add a router, add `public/_redirects` at that point.
+- **`public/_headers`** sets the security headers and the cache policy:
+  fingerprinted assets under `/assets/` are `immutable`, while `index.html` must
+  revalidate, so a deploy cannot leave clients holding a stale entry point that
+  references deleted asset hashes.
+- **`worker/index.js` is the Worker entry point.** It only canonicalises the
+  hostname and then defers to the asset store via the `ASSETS` binding.
+- **`wrangler.jsonc` pins the Worker name.** Workers Builds fails the build
+  immediately when the Worker name in the Cloudflare dashboard does not match
+  `name` here, so the two must be changed together. It also declares `dist` as
+  the asset directory and sets `not_found_handling` to `none`, which is what
+  makes unknown paths return a real 404.
 - **`package-lock.json` is committed** so `npm ci` installs a byte-identical
-  tree in CI. Do not add it to `.gitignore`.
+  tree. Do not add it to `.gitignore`.
 - **`.env.example` is a leftover** from AI Studio. Nothing in `src/` reads
-  `GEMINI_API_KEY` or `APP_URL`, and nothing needs to be configured to deploy.
+  `GEMINI_API_KEY` or `APP_URL`, and nothing needs configuring to deploy.
 - **Unused dependencies.** `@google/genai`, `express`, `dotenv` and `motion` are
-  declared in `package.json` but imported nowhere. They only slow the CI install
+  declared in `package.json` but imported nowhere. They only slow the install
   down. They were left in place rather than removed, since dropping them is a
   judgement call about where the project is heading — `metadata.json` still
   advertises a server-side Gemini capability that the code does not use.
