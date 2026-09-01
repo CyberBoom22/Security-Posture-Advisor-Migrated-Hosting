@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://secposadv.xavierboone.us/sitemap.xml
+Sitemap: https://sec-pos-advisor.xavierboone.us/sitemap.xml
