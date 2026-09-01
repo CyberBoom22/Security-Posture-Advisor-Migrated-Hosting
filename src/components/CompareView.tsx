@@ -36,6 +36,14 @@ import {
 import { JurisdictionMatrixView } from './JurisdictionMatrixView';
 
 // Shared Section Intro
+/*
+ * ---------------------------------------------------------------------------
+ * Presentational helpers, shared by all five comparison tabs so the tabs stay
+ * visually consistent as products are added.
+ * ---------------------------------------------------------------------------
+ */
+
+/** Heading and standfirst opening each tab. */
 const SectionIntro: React.FC<{ title: string; body: string }> = ({
   title,
   body,
@@ -68,6 +76,13 @@ const SectionIntro: React.FC<{ title: string; body: string }> = ({
 );
 
 // Shared Plan Toggle
+/**
+ * Switches a tab between individual and family pricing.
+ *
+ * The two tiers are not comparable across products — vendors bundle different
+ * seat counts and adult caps into "family" — so the tables show one tier at a
+ * time rather than trying to present both at once.
+ */
 const PlanToggle: React.FC<{
   plan: 'family' | 'indiv';
   setPlan: (p: 'family' | 'indiv') => void;
@@ -124,6 +139,13 @@ const PlanToggle: React.FC<{
 );
 
 // Shared Takeaway Box
+/**
+ * The dark summary panel closing each tab.
+ *
+ * Carries the conclusions a reader would otherwise have to derive from the
+ * table themselves — chiefly which renewal prices jump hardest and which
+ * "family" plans cannot seat the adults they imply.
+ */
 const TakeawayBox: React.FC<{
   items: { label: string; body: string }[];
 }> = ({ items }) => (
@@ -191,6 +213,15 @@ const TakeawayBox: React.FC<{
 );
 
 // Shared YesNo cell helper
+/**
+ * Renders a feature cell: tick, cross, or the qualifying text itself.
+ *
+ * The string case is the important one. Many bundled features are real but
+ * conditional — regional limits, lower tiers, partial cover — and a bare tick
+ * would overstate them, which is exactly the flattery these tables exist to
+ * strip out. A null or undefined value renders a dash, distinguishing "not
+ * offered" from "not yet researched".
+ */
 const YesNo: React.FC<{ v: boolean | string | null | undefined }> = ({ v }) => {
   if (v === true) return <Check size={16} color="#1E7A46" />;
   if (v === false) return <X size={16} color="#C4472E" />;
@@ -200,13 +231,35 @@ const YesNo: React.FC<{ v: boolean | string | null | undefined }> = ({ v }) => {
   return <Minus size={16} color="#B0A896" />;
 };
 
+/**
+ * The Compare tab: five sub-tabs of side-by-side product data.
+ *
+ * Where the advisor narrows to one recommendation, this aims for coverage and
+ * leaves the judgement to the reader. Each tab pairs a card list, which has
+ * room for strengths and limitations in prose, with a dense matrix for
+ * scanning across products.
+ *
+ * All five sub-tabs are rendered from the tables in data.ts, so adding a
+ * product there is enough to make it appear here.
+ */
 export const CompareView: React.FC = () => {
+  // Which sub-tab is showing. Like the top-level tabs in App.tsx, this never
+  // reaches the URL, so a specific comparison cannot be linked to.
   const [activeTab, setActiveTab] = useState<
     'pw' | 'suite' | 'vpn' | 'av' | 'jurisdiction'
   >('pw');
+  // Password managers and suites keep independent plan-tier toggles, so
+  // switching one tab to individual pricing does not silently change the other.
   const [pwPlan, setPwPlan] = useState<'family' | 'indiv'>('family');
   const [suitePlan, setSuitePlan] = useState<'family' | 'indiv'>('family');
+  // The reader's own location, which decides which of the three userImpact
+  // readings from data.ts is shown. The same provider carries different legal
+  // exposure depending on where its user lives, so jurisdiction commentary is
+  // meaningless without knowing this.
   const [userRegion, setUserRegion] = useState<UserRegion>('us');
+
+  // The jurisdiction dossier open in the modal, or null when none is. Held
+  // here rather than inside each card so only one can ever be open.
   const [selectedDossier, setSelectedDossier] = useState<{
     name: string;
     info: JurisdictionInfo;
@@ -266,6 +319,8 @@ export const CompareView: React.FC = () => {
           </p>
         </div>
 
+        {/* Region selector. Kept above the sub-tabs because it re-reads every
+          * jurisdiction claim on the page, not just the one tab in view. */}
         {/* Global User Location / Legal Perspective Toggle Bar */}
         <div
           style={{
@@ -348,6 +403,8 @@ export const CompareView: React.FC = () => {
           </div>
         </div>
 
+        {/* Four product categories plus the jurisdiction matrix, which
+          * compares providers by legal exposure rather than by price. */}
         {/* Sub-tabs */}
         <div
           style={{
@@ -404,6 +461,9 @@ export const CompareView: React.FC = () => {
           </button>
         </div>
 
+        {/* Each tab follows the same shape: intro, plan-tier toggle where the
+          * category has tiers, product cards, the dense matrix, then the
+          * takeaways. */}
         {/* TAB 1: PASSWORD MANAGERS */}
         {activeTab === 'pw' && (
           <div>

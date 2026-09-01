@@ -17,8 +17,26 @@ import {
 } from 'lucide-react';
 import { JurisdictionInfo, LegalReference } from '../data';
 
+/**
+ * Presentation layer for the jurisdiction data in data.ts: a badge, an
+ * in-page impact card, and the full dossier modal.
+ *
+ * The argument these three make is that where a provider is incorporated
+ * decides who can compel it to hand over data, and that this can outweigh a
+ * feature comparison entirely. The components stay close to the cited statutes
+ * so a reader can check the claim rather than take it on trust.
+ */
+
+/** Whose legal exposure is being described — the reader's own location. */
 export type UserRegion = 'us' | 'eu' | 'global';
 
+/**
+ * Colour and description per intelligence-sharing bloc.
+ *
+ * Colour carries meaning here and runs warm-to-cool with exposure: 5-Eyes
+ * members share intelligence most freely, and Swiss is separated from the rest
+ * of Non-14-Eyes because its regime differs materially rather than by degree.
+ */
 export const ALLIANCE_COLORS: Record<
   JurisdictionInfo['allianceCategory'],
   { bg: string; text: string; border: string; desc: string }
@@ -61,6 +79,12 @@ interface JurisdictionBadgeProps {
   showDetailsButton?: boolean;
 }
 
+/**
+ * Compact alliance marker shown on product cards.
+ *
+ * Falls back to Non-14-Eyes styling for an unrecognised category, so a new
+ * entry in data.ts renders plainly rather than crashing or losing its colour.
+ */
 export const JurisdictionBadge: React.FC<JurisdictionBadgeProps> = ({
   info,
   onClick,
@@ -133,6 +157,14 @@ interface LegalImpactCardProps {
   onOpenDossier?: () => void;
 }
 
+/**
+ * In-page summary of what a provider's jurisdiction means for this reader.
+ *
+ * Collapsed by default: it is context for a purchase decision, not the
+ * decision itself, and expanded by default it would bury the pricing. The
+ * text shown is selected by userRegion, since the same provider carries
+ * different exposure for a US, EU or other reader.
+ */
 export const LegalImpactCard: React.FC<LegalImpactCardProps> = ({
   serviceName,
   info,
@@ -221,6 +253,8 @@ export const LegalImpactCard: React.FC<LegalImpactCardProps> = ({
         {impactText}
       </div>
 
+      {/* The statutes themselves, as badges. Each links to the official text
+        * so the summary can be checked against the source. */}
       {/* Governing Statutes Quick Badges */}
       {info.governingStatutes && info.governingStatutes.length > 0 && (
         <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
@@ -340,6 +374,15 @@ interface JurisdictionModalProps {
   onClose: () => void;
 }
 
+/**
+ * Full dossier for one provider: seat and origin, alliance, governing
+ * statutes, subpoena reach, and any court precedents.
+ *
+ * Props accept either a provider's fields directly or a whole record, because
+ * callers hold their subjects in different shapes — `item` may carry the
+ * jurisdiction under either key. The resolved* values below normalise that,
+ * and render a fallback rather than failing when nothing usable arrives.
+ */
 export const JurisdictionModal: React.FC<JurisdictionModalProps> = ({
   serviceName,
   info,
@@ -521,6 +564,9 @@ export const JurisdictionModal: React.FC<JurisdictionModalProps> = ({
             </div>
           </div>
 
+          {/* Every statute with its official citation and a link to the
+            * primary source. This is the section that makes the rest of the
+            * dossier checkable instead of assertion. */}
           {/* OFFICIAL STATUTORY CODES & DIRECT GOVERNMENT LINKS */}
           {resolvedInfo.governingStatutes && resolvedInfo.governingStatutes.length > 0 && (
             <div
@@ -631,6 +677,9 @@ export const JurisdictionModal: React.FC<JurisdictionModalProps> = ({
             </div>
           )}
 
+          {/* Optional. Present only where a decision or a documented seizure
+            * shows how the statutes above have actually been applied, which
+            * carries more weight than the text of the law alone. */}
           {/* COURT PRECEDENTS / POLICE INCIDENTS */}
           {resolvedInfo.courtPrecedents && resolvedInfo.courtPrecedents.length > 0 && (
             <div

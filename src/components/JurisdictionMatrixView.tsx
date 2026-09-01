@@ -32,6 +32,23 @@ import {
   UserRegion,
 } from './JurisdictionDetails';
 
+/**
+ * The jurisdiction sub-tab of Compare: every provider on the site ranked by
+ * legal exposure rather than by price, plus a directory of the statutes cited.
+ *
+ * This is the one view that cuts across product categories. A reader choosing
+ * between a password manager and a VPN never compares them on features, but
+ * both hold data reachable by whichever government seats them, and that is
+ * comparable.
+ */
+
+/**
+ * One provider, flattened out of its category-specific table.
+ *
+ * The comparison tables in data.ts have different shapes because they describe
+ * different products; this is the common subset needed to compare them on
+ * jurisdiction alone.
+ */
 interface FlatServiceRecord {
   name: string;
   category: 'Password Manager' | 'Security Suite' | 'VPN' | 'Antivirus' | 'Carrier / ISP';
@@ -43,7 +60,12 @@ export const JurisdictionMatrixView: React.FC<{
   userRegion: UserRegion;
   setUserRegion: (r: UserRegion) => void;
 }> = ({ userRegion, setUserRegion }) => {
+  // Two views: the provider matrix, and the statute directory behind it.
   const [activeTab, setActiveTab] = useState<'matrix' | 'statutes'>('matrix');
+
+  // Filters, applied together. Alliance answers "who can compel this?",
+  // category narrows to one product type, and the search box covers the case
+  // where the reader already has a specific provider in mind.
   const [filterAlliance, setFilterAlliance] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -52,7 +74,9 @@ export const JurisdictionMatrixView: React.FC<{
     info: JurisdictionInfo;
   } | null>(null);
 
-  // Combine all services into a unified flat dataset
+  // Flatten every product table into one comparable list. Rebuilt each render
+  // rather than memoised: the source tables are static and small enough that
+  // the work is irrelevant next to rendering the matrix itself.
   const allServices: FlatServiceRecord[] = [
     ...PW_MANAGERS.map((m) => ({
       name: m.name,
@@ -78,6 +102,16 @@ export const JurisdictionMatrixView: React.FC<{
       url: a.url,
       jurisdiction: a.jurisdiction,
     })),
+    // Carriers and ISPs are included because they see traffic before any of
+    // the products above encrypt it, which makes their jurisdiction as
+    // relevant as a VPN's. They are the one category whose JurisdictionInfo is
+    // derived here rather than authored in data.ts: CarrierInfo carries only
+    // origin, HQ and framework, so alliance and statutes are inferred from
+    // whether the carrier is US-based. That inference is deliberately coarse —
+    // a non-US carrier is placed outside the 14-Eyes bloc without checking
+    // which country it actually sits in, so any carrier added here that is
+    // neither US nor genuinely outside those alliances needs its own entry
+    // rather than this fallback.
     ...Object.entries(CARRIERS)
       .filter(([name]) => name !== 'Other / Not sure')
       .map(([name, c]) => ({
@@ -200,6 +234,8 @@ export const JurisdictionMatrixView: React.FC<{
         </p>
       </div>
 
+      {/* The matrix answers "who can reach this provider"; the statute
+        * directory answers "what is the law that lets them". */}
       {/* Sub-view switcher: Service Matrix vs. Statutory Directory */}
       <div
         style={{
@@ -326,6 +362,8 @@ export const JurisdictionMatrixView: React.FC<{
         </div>
       </div>
 
+      {/* The blocs, explained before the matrix uses them as a filter — the
+        * labels mean nothing to a reader who has not met them before. */}
       {/* Alliance Explainer Cards */}
       <div className="two-col" style={{ gap: 12, marginBottom: 24 }}>
         <div
