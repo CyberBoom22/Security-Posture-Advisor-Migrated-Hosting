@@ -14,6 +14,20 @@
  *   #C5A059  gold accent          #A6823C  gold, pressed
  */
 
+/* Tailwind is imported for its reset and base layer only. No utility class
+ * from it is used anywhere in this app — every className in src/ resolves to a
+ * custom class defined further down this file.
+ *
+ * That has a trap attached. Tailwind scans the .tsx files for candidate class
+ * names and cannot tell markup from prose, so an ordinary English word sitting
+ * in a comment will generate a utility and ship it to every visitor. Writing
+ * "orbit ring", "shield outline" or "stays hidden" in a comment has already
+ * produced .ring, .outline and .hidden, once dragging in fifteen @property
+ * blocks of ring and shadow machinery for 1.8kB of dead CSS.
+ *
+ * So: after editing comments, check that dist/assets/*.css has not grown. Use
+ * hyphenated or reworded phrasing ("orbit halo", "inline-style allowance")
+ * when a bare utility word would otherwise appear. */
 @import "tailwindcss";
 
 /* --- Reset and base ------------------------------------------------------ */

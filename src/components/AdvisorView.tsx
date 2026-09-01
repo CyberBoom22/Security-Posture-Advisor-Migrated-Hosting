@@ -23,8 +23,23 @@ import {
   VPN_CHOICES,
 } from '../data';
 
+/**
+ * The Advisor tab: an intake form, and the plan engine that turns its answers
+ * into a costed, ordered recommendation.
+ *
+ * The engine's premise is subtraction. It starts from what the household
+ * already has — carrier and ISP perks the reader is usually paying for and not
+ * using — and only recommends buying what those do not cover. That is what
+ * separates it from a vendor's own "what do I need" quiz, which starts from
+ * zero and therefore always recommends buying everything.
+ *
+ * Nothing here is transmitted. All state is local to this component and lost
+ * on tab change or reload; there is no storage, no analytics and no request.
+ */
 export const AdvisorView: React.FC = () => {
-  // State with exact defaults
+  // Defaults describe a plausible mid-size household rather than an empty
+  // form, so the results panel has something meaningful in it immediately and
+  // the reader can adjust from a worked example instead of a blank slate.
   const [mobileDevices, setMobileDevices] = useState(4);
   const [desktopDevices, setDesktopDevices] = useState(2);
   const [household, setHousehold] = useState(4);
@@ -42,17 +57,34 @@ export const AdvisorView: React.FC = () => {
 
   const devices = mobileDevices + desktopDevices;
 
-  // Plan Engine computation
+  // The plan engine. Recomputes on every input change, which is what makes the
+  // costs update live as the sliders move.
   const plan = useMemo(() => {
     const c = CARRIERS[carrier] || CARRIERS['Other / Not sure'];
+    // --- What the household already has -------------------------------
+    // Router-level protection only applies if this provider supplies the home
+    // internet, either because it is an ISP or the reader said they use it for
+    // both. It is the more valuable kind: it covers every device on the
+    // network, including ones that cannot run a security agent.
     const networkActive = (c.isISP || sameISP) && c.networkPerks.length > 0;
     const mobileCovered = c.mobilePerks.length > 0;
+    // Most carrier bundles are phone-only apps. This detects the few that also
+    // cover computers by matching the phrasing used in the carrier notes in
+    // data.ts — a text match, so new wording there needs adding here too.
     const desktopInstallable = /installs on desktop|incl\. desktop|on individual devices/i.test(
       c.mobilePerks.join(' ')
     );
     const desktopCovered = networkActive || desktopInstallable;
     const desktopGap = desktopDevices > 0 && !desktopCovered;
 
+    // --- Password manager ----------------------------------------------
+    // A plan must clear both caps: enough total seats, and enough of them
+    // available to adults. Testing seats alone would wrongly accept a plan
+    // advertised as six seats that in fact hosts only two adults.
+    //
+    // VAULT_PICKS is ordered cheapest-first, so the first match is the
+    // cheapest that fits. If nothing fits, fall back to the largest plan and
+    // put the adults it cannot seat on free accounts below.
     const totalVaultPeople = vaultAdults + vaultKids;
     const fits = VAULT_PICKS.filter(
       (v) => vaultAdults <= v.adultCap && totalVaultPeople <= v.totalSeats
@@ -63,6 +95,10 @@ export const AdvisorView: React.FC = () => {
 
     const carrierHasVpn =
       /VPN/i.test(c.mobilePerks.join(' ')) || /VPN/i.test(c.note);
+    // --- VPN -------------------------------------------------------------
+    // If the router can run a VPN, restrict the shortlist to providers that
+    // support it: one router install covers the whole house, including devices
+    // with no VPN app of their own.
     const vpnPool =
       routerVpn === 'yes'
         ? VPN_CHOICES.filter((v) => v.routerCapable)
@@ -71,12 +107,22 @@ export const AdvisorView: React.FC = () => {
     const chosenVpn =
       (vpnChoice && vpnShortlist.find((v) => v.id === vpnChoice)) ||
       vpnShortlist[0];
+    // Until the reader picks one, the first shortlisted VPN is costed so the
+    // total is not misleadingly low, but the line is flagged `pending` so the
+    // UI can show it as provisional rather than decided.
     const vpnDecided = !!(vpnChoice && vpnShortlist.find((v) => v.id === vpnChoice));
 
+    // --- Antivirus ---------------------------------------------------------
+    // Count only devices the reader wants covered AND that the carrier does
+    // not already cover. This is the subtraction step: a household whose
+    // carrier bundles mobile security needs a suite sized for its computers
+    // alone, not for every device it owns.
     const mobileAVneeded = wantMobileAV && !mobileCovered ? mobileDevices : 0;
     const desktopAVneeded = wantDesktopAV && !desktopCovered ? desktopDevices : 0;
     const agentsNeeded = mobileAVneeded + desktopAVneeded;
     const wantsAnyAV = wantMobileAV || wantDesktopAV;
+    // Smallest suite whose device cap covers the agents actually needed; a
+    // null cap means the vendor advertises unlimited devices.
     const avSuite =
       agentsNeeded > 0
         ? AV_SUITES.find((s) => s.deviceCap === null || agentsNeeded <= s.deviceCap) ||
@@ -84,7 +130,10 @@ export const AdvisorView: React.FC = () => {
         : null;
     const antivirusNeeded = agentsNeeded > 0;
 
-    // Cost roll-up lineItems
+    // --- Cost roll-up --------------------------------------------------
+    // Each recommendation becomes a line item carrying both prices, so the
+    // total can be shown at the intro rate and at the renewal rate. Showing
+    // only the first is the practice this whole site argues against.
     interface LineItem {
       label: string;
       url: string;
@@ -130,16 +179,25 @@ export const AdvisorView: React.FC = () => {
       });
     }
 
+    // Totals are annual, divided to a monthly figure for comparison against
+    // the reader's stated budget. The budget check deliberately uses the intro
+    // monthly cost, matching what they would actually pay in year one; the
+    // renewal figure is displayed alongside so the later jump is apparent
+    // rather than discovered at renewal.
     const yearlyIntro = lineItems.reduce((acc, item) => acc + (item.price.intro || 0), 0);
     const yearlyRenew = lineItems.reduce((acc, item) => acc + (item.price.renew || 0), 0);
     const total = +(yearlyIntro / 12).toFixed(2);
     const monthlyRenew = +(yearlyRenew / 12).toFixed(2);
     const overBudget = total > budget;
 
-    // Steps Generation
+    // --- Rollout instructions ------------------------------------------
+    // The plan is emitted as ordered steps rather than a list of products,
+    // because the order matters: activating what the carrier already provides
+    // comes first, since it can remove the need for a later purchase.
     const steps: { title: string; body: string }[] = [];
 
-    // Step 1: Carrier
+    // Step 1: turn on what is already paid for. Wording depends on whether the
+    // provider offers router-level cover, app-only cover, or nothing known.
     let carrierStepBody = '';
     if (networkActive) {
       carrierStepBody = `Log into your ${carrier} account and turn on the router-level security (it covers desktops automatically). Install the mobile security app on each phone/tablet.`;
@@ -281,6 +339,12 @@ export const AdvisorView: React.FC = () => {
           fontFamily: "'Inter', sans-serif",
         }}
       >
+        {/*
+          * Intake form. Every control is a slider or a segmented button rather
+          * than a free text field: the engine needs bounded numeric input, and
+          * constraining it at the control removes any need to validate or
+          * sanitise what comes back.
+          */}
         {/* Eyebrow */}
         <div
           style={{
@@ -330,6 +394,10 @@ export const AdvisorView: React.FC = () => {
           Complete the six parameters below to generate an independent, deduplicated allocation plan.
         </p>
 
+        {/* Six numeric cards, then full-width cards for the questions whose
+          * answers change what the engine can recommend rather than just how
+          * much of it: carrier, router VPN capability, and which device
+          * classes want anti-malware. */}
         {/* Input Cards Grid */}
         <div className="two-col" style={{ gap: 16 }}>
           {/* Card 1: Mobile Devices */}
@@ -507,6 +575,9 @@ export const AdvisorView: React.FC = () => {
               ))}
             </div>
 
+            {/* Only asked when the chosen provider could plausibly supply home
+              * internet too. Answering yes unlocks router-level coverage,
+              * which can remove the antivirus line from the plan entirely. */}
             {/* Conditional Sub-block for Carrier ISP */}
             {!selectedCarrierData.isISP &&
               selectedCarrierData.networkPerks.length > 0 && (
@@ -653,6 +724,12 @@ export const AdvisorView: React.FC = () => {
         </button>
 
         {/* RESULTS SECTION */}
+        {/*
+          * Results. The plan itself is recomputed continuously, but it stays
+          * shown until the reader submits, so the numbers do not churn under
+          * them while they are still answering. `submitted` is never reset —
+          * once shown, the results track the inputs live.
+          */}
         {submitted && (
           <div style={{ marginTop: 40 }}>
             {/* Header row */}
@@ -709,6 +786,9 @@ export const AdvisorView: React.FC = () => {
               </span>
             </div>
 
+            {/* The plan in reading order: what you already have, then the
+              * vault, then the VPN, then anti-malware — the same order as the
+              * rollout steps further down. */}
             {/* Results Card with 4 rec-rows */}
             <div className="advisor-card" style={{ padding: '8px 24px' }}>
               {/* Row 1: Carrier Check */}
@@ -1333,6 +1413,10 @@ export const AdvisorView: React.FC = () => {
                     <div style={{ textAlign: 'right' }}>Monthly</div>
                   </div>
 
+                  {/* One row per recommended product, each showing both
+                    * prices. Rows flagged `pending` are provisional: they are
+                    * costed so the total is not misleadingly low, but the
+                    * reader has not chosen that option yet. */}
                   {/* Line Items */}
                   {plan.lineItems.map((item, idx) => (
                     <div
@@ -1415,6 +1499,9 @@ export const AdvisorView: React.FC = () => {
                     </div>
                   ))}
 
+                  {/* Both totals side by side. The renewal figure is the
+                    * point of the exercise: it is the number that applies for
+                    * every year after the first. */}
                   {/* Total Row */}
                   <div
                     style={{
@@ -1484,6 +1571,9 @@ export const AdvisorView: React.FC = () => {
               </p>
             </div>
 
+            {/* Ordered rollout. Step one is always activating what the
+              * household already pays for, because doing it first can make a
+              * later purchase unnecessary. */}
             {/* Implementation Timeline */}
             <div style={{ marginTop: 36 }}>
               <div
