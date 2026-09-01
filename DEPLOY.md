@@ -76,22 +76,98 @@ deploying the same project will fight over the deployment history.
 
 ---
 
-## Putting it on a subdomain
+## Putting it on a domain you own
 
-Out of the box the site is served at `security-posture-advisor.pages.dev`.
-That is already a Cloudflare subdomain and needs no DNS work.
+Out of the box the site is served at `security-posture-advisor.pages.dev`. To
+serve it from your own domain, the domain has to reach Cloudflare first, and
+then the Pages project has to claim the hostname.
 
-For a subdomain of a domain you own (for example `hub.example.com`):
+### Step 1 — get the domain onto Cloudflare
 
-1. The domain must be in the same Cloudflare account, with Cloudflare acting as
-   its nameservers.
-2. Open the Pages project → *Custom domains* → *Set up a domain* → enter
-   `hub.example.com`.
-3. Cloudflare creates the `CNAME` record pointing at the project and issues the
-   TLS certificate. This normally takes a few minutes.
+**If the domain already uses Cloudflare nameservers,** skip to step 2.
 
-Do not create the `CNAME` by hand first — letting Pages add it avoids a
-conflicting record that blocks certificate issuance.
+**If it is registered elsewhere and not yet on Cloudflare,** add it:
+
+1. Cloudflare dashboard → *Add a site* → enter the domain → pick the Free plan.
+2. Cloudflare scans your current DNS and copies the records it finds. **Check
+   this list against your registrar before continuing** — the scan is
+   best-effort and quietly misses records. Anything missing here stops working
+   the moment the nameservers change. Mail records (`MX`, and the `TXT` records
+   for SPF, DKIM and DMARC) are the ones that most often get dropped, and losing
+   them silently breaks inbound email for the domain.
+3. At your registrar, replace the existing nameservers with the two Cloudflare
+   gives you.
+4. Wait for Cloudflare to report the domain as **Active**. This is usually well
+   under an hour but can take up to 24.
+
+Do not start step 2 until the domain shows Active.
+
+> Keeping DNS at your current provider instead is possible but worse: you would
+> point a `CNAME` at `security-posture-advisor.pages.dev` by hand, and most
+> providers refuse a `CNAME` on the bare apex, so `example.com` (without `www`)
+> would not work unless they support `ALIAS`/`ANAME` records. Moving the
+> nameservers avoids the whole problem.
+
+### Step 2 — attach the domain to the Pages project
+
+In *Workers & Pages* → your project → *Custom domains* → *Set up a domain*,
+enter the hostname and confirm. Do this once per hostname you want to serve.
+
+Cloudflare then creates the DNS record itself and issues a TLS certificate,
+normally within a few minutes.
+
+Two things that block certificate issuance, both worth checking first:
+
+- **A conflicting record already on that hostname.** If an `A`, `AAAA` or
+  `CNAME` record for it already exists, delete it and let Pages create its own.
+  Adding the record by hand ahead of time causes the same conflict.
+- **The record must stay proxied** (the orange cloud in the DNS tab). Grey-cloud
+  DNS-only mode bypasses Cloudflare and the Pages project never sees the
+  request.
+
+### Step 3 — pick one canonical hostname
+
+If you serve both `example.com` and `www.example.com`, decide which is the real
+one and redirect the other. Serving identical content on both splits search
+ranking between them, which matters for a site built around organic search.
+
+Attach **both** hostnames in step 2, then send the non-canonical one to the
+canonical one with a redirect: *Rules → Redirect Rules → Create rule*, matching
+requests where the hostname equals the non-canonical name, with a **301
+(permanent)** redirect to the canonical hostname, preserving path and query
+string.
+
+Apex (`example.com`) and `www` are both fine choices. Cloudflare flattens
+`CNAME` records at the apex, so the apex works here even though a plain DNS
+provider would not allow it.
+
+### Step 4 — check the TLS mode
+
+*SSL/TLS → Overview* must be set to **Full (strict)**. The default on newer
+zones is already correct, but a zone set to **Flexible** will send visitors into
+an infinite redirect loop against Pages, which always serves HTTPS. This is the
+single most common cause of a custom domain that loads as a redirect loop right
+after setup.
+
+### Step 5 — verify
+
+Once the certificate is issued:
+
+```bash
+curl -sSI https://example.com | head -n 1        # expect: HTTP/2 200
+curl -sSI https://www.example.com | head -n 1    # expect: 301 if redirecting
+```
+
+The `pages.dev` URL keeps working alongside the custom domain. If you would
+rather it not be publicly reachable, block it under the project's
+*Settings → General*.
+
+### After the domain is live
+
+`index.html` currently has no `<link rel="canonical">` and no `og:url`, because
+until now there was no stable address to point them at. Both should name the
+canonical hostname you chose in step 3 once it is settled, and a `robots.txt`
+and `sitemap.xml` referencing that hostname are worth adding at the same time.
 
 ---
 
