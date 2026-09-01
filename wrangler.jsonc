@@ -1,0 +1,18 @@
+{
+  // Must match the Worker name in the Cloudflare dashboard exactly.
+  // Workers Builds fails the build immediately if these differ.
+  "name": "security-posture-advisor-migrated-hosting",
+  "compatibility_date": "2026-09-01",
+
+  // Assets-only Worker: there is no server-side code, so no "main" entry
+  // point. Cloudflare serves the built files directly.
+  "assets": {
+    "directory": "./dist",
+
+    // "none" returns a genuine 404 for unknown paths. Do not change this to
+    // "single-page-application" unless a client-side router is added: this
+    // app renders one page, so a catch-all would answer every unknown URL
+    // with 200 and the full app, which reads as a soft 404 to search engines.
+    "not_found_handling": "none"
+  }
+}

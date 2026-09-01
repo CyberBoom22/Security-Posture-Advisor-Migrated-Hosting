@@ -81,6 +81,19 @@ curl -sSI https://sec-pos-advisor.xavierboone.us | head -n 1  # expect: HTTP/2 2
 curl -sS  https://sec-pos-advisor.xavierboone.us/robots.txt   # expect: the sitemap line
 ```
 
+### The second subdomain
+
+`securitypostureadvisor.xavierboone.us` is also attached to this Worker and
+serves byte-identical content. Two hostnames serving the same site can be
+indexed separately, which splits the ranking between them.
+
+`<link rel="canonical">` names `sec-pos-advisor.xavierboone.us`, so a crawler
+that honours it credits that one. To settle it outright rather than relying on
+the hint, add a **Redirect Rule** (*Rules → Redirect Rules → Create rule*) on
+the zone: match hostname `securitypostureadvisor.xavierboone.us` and issue a
+**301** to the same path on `sec-pos-advisor.xavierboone.us`. Do this at the
+zone, not in this repo — a static asset cannot redirect itself.
+
 ### Retire the workers.dev URL
 
 The Worker also answers on its `*.workers.dev` subdomain, serving identical
@@ -106,6 +119,11 @@ is confirmed working.
   fingerprinted assets under `/assets/` are `immutable`, while `index.html` must
   revalidate, so a deploy cannot leave clients holding a stale entry point that
   references deleted asset hashes.
+- **`wrangler.jsonc` pins the Worker name.** Workers Builds fails the build
+  immediately when the Worker name in the Cloudflare dashboard does not match
+  `name` here, so the two must be changed together. It also declares `dist` as
+  the asset directory and sets `not_found_handling` to `none`, which is what
+  makes unknown paths return a real 404.
 - **`package-lock.json` is committed** so `npm ci` installs a byte-identical
   tree. Do not add it to `.gitignore`.
 - **`.env.example` is a leftover** from AI Studio. Nothing in `src/` reads
