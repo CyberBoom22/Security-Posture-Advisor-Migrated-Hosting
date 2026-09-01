@@ -83,16 +83,24 @@ curl -sS  https://sec-pos-advisor.xavierboone.us/robots.txt   # expect: the site
 
 ### The second subdomain
 
-`securitypostureadvisor.xavierboone.us` is also attached to this Worker and
-serves byte-identical content. Two hostnames serving the same site can be
-indexed separately, which splits the ranking between them.
+`securitypostureadvisor.xavierboone.us` is also attached to this Worker. It is
+**301 redirected** to `sec-pos-advisor.xavierboone.us` by `worker/index.js`,
+so the two hostnames cannot end up indexed as competing copies of the site.
 
-`<link rel="canonical">` names `sec-pos-advisor.xavierboone.us`, so a crawler
-that honours it credits that one. To settle it outright rather than relying on
-the hint, add a **Redirect Rule** (*Rules → Redirect Rules → Create rule*) on
-the zone: match hostname `securitypostureadvisor.xavierboone.us` and issue a
-**301** to the same path on `sec-pos-advisor.xavierboone.us`. Do this at the
-zone, not in this repo — a static asset cannot redirect itself.
+The redirect lives in the Worker rather than in a zone Redirect Rule so that it
+is versioned with the code and deploys with it. Two consequences worth knowing:
+
+- `assets.run_worker_first` is `true`. Static assets are normally served
+  without invoking Worker code at all, so without this the redirect would
+  never run for `/` or for any path that matches a real file. The cost is that
+  every request now invokes the Worker, which counts against the Workers
+  request quota.
+- `*.workers.dev` is deliberately **not** redirected. It bypasses the zone
+  entirely, which makes it the way back in if a custom domain or the zone
+  configuration breaks.
+
+To change the canonical hostname, update `CANONICAL_HOST` in `worker/index.js`
+alongside the four places listed at the bottom of this file.
 
 ### Retire the workers.dev URL
 
@@ -119,6 +127,8 @@ is confirmed working.
   fingerprinted assets under `/assets/` are `immutable`, while `index.html` must
   revalidate, so a deploy cannot leave clients holding a stale entry point that
   references deleted asset hashes.
+- **`worker/index.js` is the Worker entry point.** It only canonicalises the
+  hostname and then defers to the asset store via the `ASSETS` binding.
 - **`wrangler.jsonc` pins the Worker name.** Workers Builds fails the build
   immediately when the Worker name in the Cloudflare dashboard does not match
   `name` here, so the two must be changed together. It also declares `dist` as
