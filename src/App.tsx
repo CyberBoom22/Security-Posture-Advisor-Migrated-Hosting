@@ -8,6 +8,21 @@ import { AdvisorView } from './components/AdvisorView';
 import { CompareView } from './components/CompareView';
 import { SupportView } from './components/SupportView';
 
+/**
+ * Application shell: dispatch bar, masthead and tab navigation, disclaimer,
+ * the active view, and the colophon.
+ *
+ * Tab state is held here in memory and is not reflected in the URL. There is
+ * no client-side router anywhere in this app, and the deployment depends on
+ * that: wrangler.jsonc sets `not_found_handling: "none"` and there is no
+ * `_redirects` SPA fallback, so unknown paths return a real 404 instead of
+ * being answered with a 200 and the whole app. If routing is ever added, both
+ * of those need revisiting together — see DEPLOY.md.
+ *
+ * A consequence worth knowing: the three views are not linkable or
+ * bookmarkable, and switching tabs loses the advisor's in-progress answers,
+ * since AdvisorView unmounts.
+ */
 export function App() {
   const [currentTab, setCurrentTab] = useState<'advisor' | 'compare' | 'support'>(
     'advisor'
@@ -15,11 +30,18 @@ export function App() {
 
   return (
     <div style={{ backgroundColor: '#F9F7F2', minHeight: '100vh', color: '#1A1A1A' }}>
+      {/*
+        * Three behavioural components that render no layout of their own:
+        * AutoFit scales the document down when content overflows the viewport,
+        * SplashLoader covers the first ~2s then removes itself, and
+        * ScrollButtons pins the jump-to-top/bottom controls.
+        */}
       <AutoFit />
       <SplashLoader />
       <ScrollButtons />
 
-      {/* Top Editorial Dispatch Bar */}
+      {/* Masthead strip above the header. Decorative framing only — it states
+        * the site's stance rather than carrying any live data. */}
       <div
         style={{
           borderBottom: '1px solid rgba(26, 26, 26, 0.08)',
@@ -57,7 +79,7 @@ export function App() {
         </div>
       </div>
 
-      {/* Editorial Masthead & Navigation Header */}
+      {/* Masthead: logo and wordmark on the left, tab navigation on the right. */}
       <header
         style={{
           maxWidth: 1040,
@@ -102,6 +124,11 @@ export function App() {
           </div>
         </div>
 
+        {/*
+          * Tab bar. These are <button> elements rather than links because the
+          * tabs are not addressable; using anchors would imply a URL that does
+          * not exist. The `on` class marks the active tab, styled in index.css.
+          */}
         <nav
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
           aria-label="Main Navigation"
@@ -135,7 +162,8 @@ export function App() {
         </nav>
       </header>
 
-      {/* Editorial Editor's Dispatch / Disclaimer Banner */}
+      {/* Standing disclaimer. Shown on every tab rather than only on Compare,
+        * because the no-affiliate claim is what the advice rests on. */}
       <div
         style={{
           maxWidth: 1040,
@@ -178,14 +206,19 @@ export function App() {
         </div>
       </div>
 
-      {/* Main View Area */}
+      {/*
+        * The active view. Rendering is conditional rather than hidden-and-kept,
+        * so each view mounts fresh and unmounts on tab change — which is why
+        * advisor answers do not survive a trip to Compare and back.
+        */}
       <main id="main-content">
         {currentTab === 'advisor' && <AdvisorView />}
         {currentTab === 'compare' && <CompareView />}
         {currentTab === 'support' && <SupportView />}
       </main>
 
-      {/* Editorial Colophon / Footer Disclaimer */}
+      {/* Colophon: the full disclaimer, plus the reminder that prices are
+        * point-in-time and should be confirmed with the provider. */}
       <footer
         style={{
           maxWidth: 1040,
@@ -231,4 +264,6 @@ export function App() {
   );
 }
 
+// Exported both ways: main.tsx imports the default, while the named export
+// keeps the component importable by name if this file ever grows siblings.
 export default App;

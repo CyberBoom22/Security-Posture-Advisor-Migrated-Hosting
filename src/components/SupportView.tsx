@@ -2,8 +2,18 @@ import React from 'react';
 import { Wallet, ArrowUpRight } from 'lucide-react';
 import { Logo } from './Logo';
 
+/**
+ * The Support tab: a single card explaining why donations exist and linking to
+ * Venmo.
+ *
+ * Kept deliberately plain. The site's whole claim is that it takes no vendor
+ * money, so the one place asking for money is the place least able to afford
+ * anything that reads as a sales pitch.
+ */
 export const SupportView: React.FC = () => {
   return (
+    // Outer wrapper centres the card vertically; the 65vh floor stops it
+    // sitting at the top of an otherwise empty page.
     <div
       style={{
         maxWidth: 1040,
@@ -17,6 +27,7 @@ export const SupportView: React.FC = () => {
         justifyContent: 'center',
       }}
     >
+      {/* The card itself. */}
       <div
         style={{
           maxWidth: 620,
@@ -42,6 +53,7 @@ export const SupportView: React.FC = () => {
         >
           Independent Stewardship
         </div>
+        {/* ^ Eyebrow label, matching the section eyebrows used across the app. */}
 
         <div
           style={{
@@ -81,6 +93,16 @@ export const SupportView: React.FC = () => {
           Donations sustain weekly pricing verification and honest analysis — keeping this tool 100% free from affiliate links and vendor kickbacks.
         </p>
 
+        {/*
+          * The donation link. target="_blank" carries rel="noopener noreferrer"
+          * so the Venmo tab gets no window.opener handle back to this page.
+          *
+          * Hover styling is done with mouse handlers rather than CSS because
+          * this element is styled inline; the handlers assign through the
+          * CSSOM, which the Content-Security-Policy permits without
+          * 'unsafe-inline'. A :hover rule in index.css would be the tidier
+          * approach if this pattern spreads.
+          */}
         <div>
           <a
             href="https://venmo.com/code?user_id=1967605971681280647&created=1787946735"
@@ -119,6 +141,8 @@ export const SupportView: React.FC = () => {
           </a>
         </div>
 
+        {/* Disclosure footer. The no-affiliate claim is the site's core
+          * promise, so it is restated at the point of asking for money. */}
         <div
           style={{
             marginTop: 32,

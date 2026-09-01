@@ -1,5 +1,11 @@
 import React from 'react';
 
+/**
+ * Fixed jump-to-top and jump-to-bottom controls.
+ *
+ * The comparison pages are long enough that reaching either end by scrolling
+ * is tedious, particularly once AutoFit has zoomed the page out.
+ */
 export const ScrollButtons: React.FC = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -13,6 +19,10 @@ export const ScrollButtons: React.FC = () => {
   };
 
   return (
+    // Positioning is set here rather than in CSS so the control stays anchored
+    // regardless of which view is mounted. React sets these through the CSSOM,
+    // not as an inline style attribute, so the Content-Security-Policy applies
+    // to it — style-src does not need 'unsafe-inline' for this to work.
     <div
       style={{
         position: 'fixed',
@@ -26,6 +36,7 @@ export const ScrollButtons: React.FC = () => {
       role="region"
       aria-label="Scroll controls"
     >
+      {/* The glyphs are decorative, so each button carries an accessible name. */}
       <button
         type="button"
         className="scrollbtn up"
