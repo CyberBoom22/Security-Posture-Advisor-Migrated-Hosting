@@ -76,98 +76,64 @@ deploying the same project will fight over the deployment history.
 
 ---
 
-## Putting it on a domain you own
+## Putting it on secposadv.xavierboone.us
 
-Out of the box the site is served at `security-posture-advisor.pages.dev`. To
-serve it from your own domain, the domain has to reach Cloudflare first, and
-then the Pages project has to claim the hostname.
+The target hostname is **`secposadv.xavierboone.us`**, and `xavierboone.us` is
+already served by Cloudflare nameservers (`aurora`/`morgan.ns.cloudflare.com`),
+so there is no nameserver migration to do. As of this writing the zone had no
+records on `secposadv`, no wildcard, and no `MX`, so nothing conflicts with the
+setup below and no mail routing is at risk.
 
-### Step 1 — get the domain onto Cloudflare
+Because this is a dedicated subdomain rather than the apex, there is also no
+apex-versus-`www` split to canonicalise — `secposadv.xavierboone.us` is the one
+and only public hostname, and it is what `<link rel="canonical">`,
+`og:url`, `robots.txt` and `sitemap.xml` in this repo already point at.
 
-**If the domain already uses Cloudflare nameservers,** skip to step 2.
+### Attach the hostname
 
-**If it is registered elsewhere and not yet on Cloudflare,** add it:
+In *Workers & Pages* → the `security-posture-advisor` project → *Custom domains*
+→ *Set up a domain*, enter `secposadv.xavierboone.us` and confirm.
 
-1. Cloudflare dashboard → *Add a site* → enter the domain → pick the Free plan.
-2. Cloudflare scans your current DNS and copies the records it finds. **Check
-   this list against your registrar before continuing** — the scan is
-   best-effort and quietly misses records. Anything missing here stops working
-   the moment the nameservers change. Mail records (`MX`, and the `TXT` records
-   for SPF, DKIM and DMARC) are the ones that most often get dropped, and losing
-   them silently breaks inbound email for the domain.
-3. At your registrar, replace the existing nameservers with the two Cloudflare
-   gives you.
-4. Wait for Cloudflare to report the domain as **Active**. This is usually well
-   under an hour but can take up to 24.
+Cloudflare creates the `CNAME` itself and issues the TLS certificate, normally
+within a few minutes. Two rules:
 
-Do not start step 2 until the domain shows Active.
-
-> Keeping DNS at your current provider instead is possible but worse: you would
-> point a `CNAME` at `security-posture-advisor.pages.dev` by hand, and most
-> providers refuse a `CNAME` on the bare apex, so `example.com` (without `www`)
-> would not work unless they support `ALIAS`/`ANAME` records. Moving the
-> nameservers avoids the whole problem.
-
-### Step 2 — attach the domain to the Pages project
-
-In *Workers & Pages* → your project → *Custom domains* → *Set up a domain*,
-enter the hostname and confirm. Do this once per hostname you want to serve.
-
-Cloudflare then creates the DNS record itself and issues a TLS certificate,
-normally within a few minutes.
-
-Two things that block certificate issuance, both worth checking first:
-
-- **A conflicting record already on that hostname.** If an `A`, `AAAA` or
-  `CNAME` record for it already exists, delete it and let Pages create its own.
-  Adding the record by hand ahead of time causes the same conflict.
-- **The record must stay proxied** (the orange cloud in the DNS tab). Grey-cloud
-  DNS-only mode bypasses Cloudflare and the Pages project never sees the
+- **Do not pre-create the DNS record.** An `A`, `AAAA` or `CNAME` already
+  sitting on `secposadv` conflicts with the one Pages needs to add and blocks
+  certificate issuance. The hostname is currently empty, so simply leave it
+  alone and let Pages claim it.
+- **Leave the record proxied** (orange cloud in the DNS tab). Grey-cloud
+  DNS-only mode bypasses Cloudflare, and the Pages project never sees the
   request.
 
-### Step 3 — pick one canonical hostname
+### Check the TLS mode
 
-If you serve both `example.com` and `www.example.com`, decide which is the real
-one and redirect the other. Serving identical content on both splits search
-ranking between them, which matters for a site built around organic search.
+*SSL/TLS → Overview* for `xavierboone.us` must be **Full (strict)**. A zone set
+to **Flexible** puts visitors in an infinite redirect loop against Pages, which
+always serves HTTPS. This is the most common cause of a custom domain that
+comes up as a redirect loop immediately after setup, and the setting lives on
+the zone, so it affects every hostname under `xavierboone.us`.
 
-Attach **both** hostnames in step 2, then send the non-canonical one to the
-canonical one with a redirect: *Rules → Redirect Rules → Create rule*, matching
-requests where the hostname equals the non-canonical name, with a **301
-(permanent)** redirect to the canonical hostname, preserving path and query
-string.
-
-Apex (`example.com`) and `www` are both fine choices. Cloudflare flattens
-`CNAME` records at the apex, so the apex works here even though a plain DNS
-provider would not allow it.
-
-### Step 4 — check the TLS mode
-
-*SSL/TLS → Overview* must be set to **Full (strict)**. The default on newer
-zones is already correct, but a zone set to **Flexible** will send visitors into
-an infinite redirect loop against Pages, which always serves HTTPS. This is the
-single most common cause of a custom domain that loads as a redirect loop right
-after setup.
-
-### Step 5 — verify
+### Verify
 
 Once the certificate is issued:
 
 ```bash
-curl -sSI https://example.com | head -n 1        # expect: HTTP/2 200
-curl -sSI https://www.example.com | head -n 1    # expect: 301 if redirecting
+curl -sSI https://secposadv.xavierboone.us | head -n 1   # expect: HTTP/2 200
+curl -sS  https://secposadv.xavierboone.us/robots.txt    # expect: the sitemap line
 ```
 
-The `pages.dev` URL keeps working alongside the custom domain. If you would
-rather it not be publicly reachable, block it under the project's
-*Settings → General*.
+The `security-posture-advisor.pages.dev` URL keeps working alongside the custom
+domain. Because it serves identical content, search engines can index both and
+split the ranking. The canonical tag in `index.html` points at
+`secposadv.xavierboone.us`, which resolves that for any crawler that honours it;
+to be certain, disable the `pages.dev` alias under the project's
+*Settings → General* once the custom domain is confirmed working.
 
-### After the domain is live
+### If the domain ever changes
 
-`index.html` currently has no `<link rel="canonical">` and no `og:url`, because
-until now there was no stable address to point them at. Both should name the
-canonical hostname you chose in step 3 once it is settled, and a `robots.txt`
-and `sitemap.xml` referencing that hostname are worth adding at the same time.
+The hostname is written into four places: `<link rel="canonical">` and
+`og:url` in `index.html`, `public/robots.txt`, and `public/sitemap.xml`. Update
+all four together, or search engines will keep being pointed at the old address.
 
 ---
 
