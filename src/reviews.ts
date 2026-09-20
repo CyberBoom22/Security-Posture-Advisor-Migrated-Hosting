@@ -156,7 +156,7 @@ export const SCORE_RUBRIC: ScoreMeta[] = [
     question: 'Does the price you are quoted resemble the price you will pay?',
     method: 'computed',
     anchors:
-      'Computed from this site’s own audited pricing: the renewal-to-intro multiplier. 1.0x = 5, up to 1.3x = 4, up to 1.8x = 3, up to 2.5x = 2, above 2.5x = 1. Free products score 5.',
+      'Computed from this site’s own audited pricing: the renewal-to-intro multiplier. Up to 1.05x = 5, up to 1.3x = 4, up to 1.8x = 3, up to 2.5x = 2, above 2.5x = 1. Free products score 5.',
   },
 ];
 
@@ -812,13 +812,22 @@ export function billingScore(company: CompanyReview): AssessedScore {
   }
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
-  const sku = company.priceRef ? `${company.priceRef.name} \u2014 ` : '';
+  const sku = company.priceRef ? `${company.priceRef.name} — ` : '';
+
   // VPN intro rates are advertised per month against a multi-year contract, so
-  // the intro figure is that rate annualised (see resolvePricing). Say so,
-  // rather than implying the vendor bills that amount up front.
-  // Only the intro side is a derived figure. The renewal price is quoted
-  // annually by every vendor here, VPNs included.
+  // the intro side is that rate annualised (see resolvePricing) while the
+  // renewal is already quoted annually. Only the intro figure is derived.
   const introPer = company.priceRef?.kind === 'vpn' ? '/yr equivalent' : '/yr';
+
+  // Intro terms here run from a single month to over three years, so "after
+  // the intro term" lands on a different year for every vendor. Name the term
+  // where it is recorded rather than letting the reader assume it is year two.
+  const vpnTerm =
+    company.priceRef?.kind === 'vpn'
+      ? VPN_COMPARE.find((v) => v.name === company.priceRef!.name)?.term
+      : undefined;
+  const termNote = vpnTerm ? ` Intro term: ${vpnTerm}.` : '';
+
   const detail = `${sku}${fmt(pricing.intro)}${introPer} intro → ${fmt(pricing.renew)}/yr at renewal (${mult.toFixed(2)}×).`;
 
   let score: number;
@@ -834,13 +843,15 @@ export function billingScore(company: CompanyReview): AssessedScore {
     verdict = 'A real increase that will surprise people who did not read the fine print.';
   } else if (mult <= 2.5) {
     score = 2;
-    verdict = 'Year two costs roughly double year one.';
+    // Deliberately not "year two": a 2-year prepaid plan has already bought
+    // year two at the intro rate.
+    verdict = 'When the intro term ends, the price roughly doubles.';
   } else {
     score = 1;
     verdict = 'The advertised price bears little relation to what you will actually pay.';
   }
 
-  return { score, evidence: `${detail} ${verdict}` };
+  return { score, evidence: `${detail}${termNote} ${verdict}` };
 }
 
 const ALLIANCE_SCORES: Record<JurisdictionInfo['allianceCategory'], number> = {
