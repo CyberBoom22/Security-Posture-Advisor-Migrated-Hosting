@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, LayoutGrid, Wallet, Star } from 'lucide-react';
+import { Shield, LayoutGrid, Wallet, Star, Newspaper } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { SplashLoader } from './components/SplashLoader';
 import { ScrollButtons } from './components/ScrollButtons';
@@ -7,11 +7,12 @@ import { AutoFit } from './components/AutoFit';
 import { AdvisorView } from './components/AdvisorView';
 import { CompareView } from './components/CompareView';
 import { ReviewsView } from './components/ReviewsView';
+import { DispatchView } from './components/DispatchView';
 import { SupportView } from './components/SupportView';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<
-    'advisor' | 'compare' | 'reviews' | 'support'
+    'advisor' | 'compare' | 'reviews' | 'dispatch' | 'support'
   >('advisor');
 
   return (
@@ -51,7 +52,7 @@ export function App() {
             <span>Public Consumer Dispatch</span>
           </div>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <span>Weekly Pricing Audit</span>
+            <span>Pricing Audited 3× Monthly</span>
             <span style={{ opacity: 0.4 }}>//</span>
             <span>Zero Sponsorships</span>
           </div>
@@ -136,6 +137,15 @@ export function App() {
 
           <button
             type="button"
+            className={`apptab ${currentTab === 'dispatch' ? 'on' : ''}`}
+            onClick={() => setCurrentTab('dispatch')}
+          >
+            <Newspaper size={14} />
+            <span>Dispatch</span>
+          </button>
+
+          <button
+            type="button"
             className={`apptab ${currentTab === 'support' ? 'on' : ''}`}
             onClick={() => setCurrentTab('support')}
           >
@@ -183,7 +193,7 @@ export function App() {
           <span>
             Created to encourage sensible household security postures without commercial bias.
             Unaffiliated with all vendors mentioned — zero affiliate commissions, zero sponsorships.
-            Pricing audited weekly to uncover real renewal costs.
+            Pricing audited three times a month to uncover real renewal costs.
           </span>
         </div>
       </div>
@@ -193,6 +203,7 @@ export function App() {
         {currentTab === 'advisor' && <AdvisorView />}
         {currentTab === 'compare' && <CompareView />}
         {currentTab === 'reviews' && <ReviewsView />}
+        {currentTab === 'dispatch' && <DispatchView />}
         {currentTab === 'support' && <SupportView />}
       </main>
 

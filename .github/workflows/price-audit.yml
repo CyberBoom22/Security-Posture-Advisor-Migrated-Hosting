@@ -1,0 +1,92 @@
+name: Pricing audit
+
+# Checks the published pricing against each vendor's live page and opens a pull
+# request when something no longer matches.
+#
+# It never publishes a scraped price. The check asks only whether the figures
+# already on the site still appear at their source; a person confirms the new
+# value before it lands. See scripts/check-pricing.mjs for why.
+#
+# A quiet run opens nothing: the script exits 0 when every price still matches,
+# and every step below is skipped.
+
+on:
+  schedule:
+    # Three times a month, the last within the final week, evaluated in UTC.
+    - cron: '0 13 10,20,28 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pricing-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Check published pricing against vendors
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # continue-on-error so exit code 10 ("changes found") does not fail the
+      # job. The outcome is read from the step's own exit code below.
+      - name: Check pricing
+        id: check
+        continue-on-error: true
+        run: |
+          set +e
+          npx tsx scripts/check-pricing.mjs --out pricing-report.json | tee pricing-report.txt
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Refresh App Store ratings
+        if: steps.check.outputs.code == '10'
+        run: node scripts/fetch-app-store-ratings.mjs --write | tee ratings-report.txt
+
+      - name: Verify the tree still builds
+        if: steps.check.outputs.code == '10'
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Open a pull request
+        if: steps.check.outputs.code == '10'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: audit/pricing
+          base: main
+          title: 'Pricing audit: figures that no longer match their source'
+          commit-message: |
+            Pricing audit: App Store ratings refreshed, price drift flagged
+
+            App Store ratings are refreshed automatically because Apple
+            publishes them through a real API. Pricing is only flagged: the
+            checker reports which recorded figures no longer appear on the
+            vendor's page, and a person confirms each one before it changes.
+          add-paths: |
+            src/reviews.ts
+          delete-branch: true
+          body-path: .github/audit-pr-body.md
+
+      - name: Upload the audit report
+        if: steps.check.outputs.code == '10'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pricing-audit
+          path: |
+            pricing-report.json
+            pricing-report.txt
+            ratings-report.txt
+          retention-days: 90

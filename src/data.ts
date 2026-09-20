@@ -804,10 +804,22 @@ export const SUITES: Suite[] = [
 export interface VPNCompareItem {
   name: string;
   url: string;
+  /**
+   * Advertised intro rate per month. This must reconcile with the other two
+   * pricing fields: introMo x (months implied by `term`) should equal
+   * `firstBill`, give or take the cent or two vendors round off the monthly
+   * figure. These three are shown together in the Compare tab, so a row that
+   * does not reconcile contradicts itself on screen. The Reviews tab also
+   * annualises this field to compute its billing-transparency score.
+   */
   introMo: number;
+  /** Length of the intro term, e.g. "2 yr + 3 mo". Free months included. */
   term: string;
+  /** Total charged up front to cover the whole intro term. */
   firstBill: number;
+  /** Cost of one year once the intro term ends. */
   renewYr: number;
+  /** Rate if billed month to month with no commitment. */
   monthlyMo: number;
   devices: string;
   blocker: string;
@@ -818,13 +830,30 @@ export interface VPNCompareItem {
   limits: string[];
 }
 
+/**
+ * Months covered by an intro term string such as "2 yr + 3 mo" or
+ * "3 yr + 3 mo". Free months count, because the subscriber is not billed
+ * again until they are used up. Returns null when the term is not a fixed
+ * length (Mullvad bills month to month and never changes).
+ *
+ * The pricing audit and the Reviews tab both need this, and it is the check
+ * that catches a stale row: introMo x termMonths should equal firstBill.
+ */
+export function termMonths(term: string): number | null {
+  if (/flat monthly|no contract/i.test(term)) return 1;
+  const years = term.match(/(\d+)\s*yr/i);
+  const months = term.match(/\+\s*(\d+)\s*mo/i);
+  if (!years && !months) return null;
+  return (years ? Number(years[1]) * 12 : 0) + (months ? Number(months[1]) : 0);
+}
+
 export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Surfshark Starter",
     url: "https://surfshark.com/pricing",
     introMo: 2.49,
     term: "2 yr + 3 mo",
-    firstBill: 53.73,
+    firstBill: 67.23,
     renewYr: 79,
     monthlyMo: 15.45,
     devices: "Unlimited",
@@ -966,9 +995,9 @@ export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Private Internet Access",
     url: "https://www.privateinternetaccess.com/buy-vpn-online",
-    introMo: 2.19,
+    introMo: 1.79,
     term: "3 yr + 3 mo",
-    firstBill: 79,
+    firstBill: 69.81,
     renewYr: 56.16,
     monthlyMo: 11.95,
     devices: "Unlimited",
