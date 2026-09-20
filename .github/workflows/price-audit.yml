@@ -12,8 +12,14 @@ name: Pricing audit
 
 on:
   schedule:
-    # Three times a month, the last within the final week, evaluated in UTC.
-    - cron: '0 13 10,20,28 * *'
+    # Three times in the last week of every month, evaluated in UTC.
+    #
+    # Days 24, 26 and 28 are used rather than something ending on the 30th or
+    # 31st because those days do not exist in February: a schedule using them
+    # would silently produce only two scans that month, and no sale could ever
+    # reach the three confirmations it needs to be announced. 24/26/28 exist in
+    # every month, leap year included.
+    - cron: '0 13 24,26,28 * *'
   workflow_dispatch:
 
 permissions:

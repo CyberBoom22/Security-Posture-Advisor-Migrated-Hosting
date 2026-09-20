@@ -19,9 +19,20 @@ answer an automated request with an error while serving a browser normally.
 2. Open each flagged vendor's page yourself and read the current numbers.
 3. Update `src/data.ts`, keeping the row internally consistent: `introMo` times
    the months implied by `term` should equal `firstBill`.
-4. Record each confirmed change in `src/changelog.ts` under `PRICE_CHANGES`,
-   with its source and, if a sale was running, the promotion.
-5. Anything worth explaining goes in `FINDINGS` in the same file.
+4. Record the sale price and, crucially, the renewal price in
+   `src/promotions.ts`. The renewal figure is the one a sale does not change
+   and the reason the Sales tab exists.
+5. Update `src/promotions.ts` for anything on sale:
+   - A discount seen for the first time is added with `confirmations: 1`.
+   - One already listed and still running has `lastSeen` set to today and
+     `confirmations` incremented.
+   - One that has disappeared is removed.
+
+   A sale is announced on the public Sales tab only once `confirmations`
+   reaches `REQUIRED_SCANS` (3). With the scan running on the 24th, 26th and
+   28th, a genuine sale clears that in four days, and a flash promotion never
+   does. Do not raise the number to publish something sooner — that is the
+   whole point of the threshold.
 
 Where the arithmetic is unambiguous the report proposes a replacement, but it is
 a proposal — confirm it against the vendor before taking it.
