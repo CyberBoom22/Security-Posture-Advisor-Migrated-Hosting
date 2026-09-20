@@ -156,9 +156,77 @@ export const SCORE_RUBRIC: ScoreMeta[] = [
     question: 'Does the price you are quoted resemble the price you will pay?',
     method: 'computed',
     anchors:
-      'Computed from this site’s own audited pricing: the renewal-to-intro multiplier. 1.0x = 5, up to 1.3x = 4, up to 1.8x = 3, up to 2.5x = 2, above 2.5x = 1. Free products score 5.',
+      'Computed from this site’s own audited pricing: the renewal-to-intro multiplier. Up to 1.05x = 5, up to 1.3x = 4, up to 1.8x = 3, up to 2.5x = 2, above 2.5x = 1. Free products score 5.',
   },
 ];
+
+/**
+ * What is actually producing the distance between the two scores. The table
+ * on the page groups companies by this rather than repeating a generic line,
+ * because "the app is good and the billing is not" is true of several entries
+ * for quite different reasons.
+ */
+export type GapDriver =
+  | 'solicited'
+  | 'lockout'
+  | 'billing'
+  | 'thin-sample'
+  | 'aligned'
+  | 'not-comparable';
+
+export const GAP_DRIVER_LABELS: Record<GapDriver, string> = {
+  solicited: 'Solicited reviews',
+  lockout: 'Zero-knowledge lockouts',
+  billing: 'Billing disputes',
+  'thin-sample': 'Thin Trustpilot sample',
+  aligned: 'Both samples agree',
+  'not-comparable': 'Not comparable',
+};
+
+/** Drivers that should read as a warning rather than a neutral observation. */
+export const CAUTION_DRIVERS: ReadonlySet<GapDriver> = new Set<GapDriver>([
+  'solicited',
+  'billing',
+  'thin-sample',
+]);
+
+/**
+ * The live numbers a gap explanation is allowed to quote. Every figure the
+ * prose cites is interpolated from here rather than typed by hand, for the
+ * same reason the jurisdiction and billing scores are computed: a sentence
+ * reading "364 reviews" goes quietly wrong the moment the ratings are
+ * refreshed, and nothing in a build catches a stale number inside a string.
+ */
+export interface GapFacts {
+  /** e.g. "4.84" */
+  appScore: string;
+  /** e.g. "8,146" */
+  appCount: string;
+  /** e.g. "2.2" */
+  tpScore: string;
+  /** e.g. "1,789" */
+  tpCount: string;
+  /** Signed, e.g. "+2.64". */
+  gap: string;
+  /** Unsigned, e.g. "2.64". */
+  gapAbs: string;
+  /** App Store ratings per Trustpilot review, e.g. "4.6". */
+  ratio: string;
+  /** Trustpilot reviews per App Store rating — only meaningful below 1:1. */
+  ratioInverse: string;
+  /** Renewal-to-intro multiplier, e.g. "2.34". */
+  renewalMult: string;
+  /** Rank by sample fullness, 1 = fullest. Word form, e.g. "third". */
+  fullnessOrdinal: string;
+  /** Rank by Trustpilot review count, 1 = largest. Word form. */
+  tpCountOrdinal: string;
+}
+
+export interface GapAnatomy {
+  driver: GapDriver;
+  /** One specific sentence about THIS company, built from its live figures. */
+  detail: (f: GapFacts) => string;
+}
 
 export interface CompanyReview {
   slug: string;
@@ -175,7 +243,9 @@ export interface CompanyReview {
   appStore: AppStoreRating;
   trustpilot: MeasuredRating;
   scores: Record<ScoreKey, AssessedScore>;
-  /** One-sentence plain reading of why the two measured scores disagree. */
+  /** Short, specific breakdown of the gap, shown in the divergence table. */
+  gapAnatomy: GapAnatomy;
+  /** Longer plain reading of why the two measured scores disagree. */
   divergenceNote: string;
 }
 
@@ -217,6 +287,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'thin-sample',
+      detail: (f) =>
+        `The most lopsided pair in the index: ${f.ratio} App Store ratings for every Trustpilot review. At ${f.tpCount} reviews, a few dozen people locked out of a vault nobody can unlock set the entire score.`,
+    },
     divergenceNote:
       'A 364-review Trustpilot sample against 32,536 App Store ratings. The Trustpilot page is dominated by people who were locked out of a vault nobody can unlock for them — a direct consequence of the encryption that earns its 5 above.',
   },
@@ -251,6 +326,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 4, evidence: 'Recurring published third-party audits, but the client is closed source.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'aligned',
+      detail: (f) =>
+        `${f.tpCount} Trustpilot reviews against ${f.appCount} App Store ratings makes this the ${f.fullnessOrdinal}-fullest Trustpilot sample here, and it agrees with the app to within half a point.`,
     },
     divergenceNote:
       'The two systems broadly agree here, which is what agreement looks like: a large sample on both sides and no aggressive review solicitation distorting either.',
@@ -287,6 +367,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'billing',
+      detail: (f) =>
+        `A modest ${f.gapAbs} gap on a ${f.ratio}:1 sample. The complaints that exist cluster on the ${f.renewalMult}x second-year price rather than on the vault.`,
+    },
     divergenceNote:
       'Modest gap. Note the renewal multiplier in the computed billing score — the Trustpilot complaints that do exist cluster around the second-year price, not the product.',
   },
@@ -320,6 +405,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 3, evidence: 'Independently audited but closed source.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'billing',
+      detail: (f) =>
+        `${f.appScore} from ${f.appCount} people asked inside a working app; ${f.tpScore} from ${f.tpCount} who went looking for a complaints page after trying to cancel. Same product, different question.`,
     },
     divergenceNote:
       'A 1.99-point gap — one of the widest in the index. The app is genuinely excellent and the billing experience is not; each platform is measuring a different half of that.',
@@ -356,6 +446,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'lockout',
+      detail: (f) =>
+        `Proton sends no review invitations, so only unresolved complaints accumulate — disproportionately account lockouts a zero-knowledge provider is unable to fix. Its ${f.appScore} is still the highest App Store score in the index.`,
+    },
     divergenceNote:
       'The sharpest inversion in the index: the best App Store score of any vendor here (4.84) against the worst Trustpilot score (2.2). Proton never solicits reviews, so its Trustpilot page collects only the self-selected minority with an unresolved complaint — disproportionately account lockouts that a zero-knowledge provider is architecturally unable to fix.',
   },
@@ -389,6 +484,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 3, evidence: 'Regulated under FCRA and GLBA safeguards rather than published cryptographic audits.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'thin-sample',
+      detail: (f) =>
+        `Only ${f.tpCount} Trustpilot reviews against ${f.appCount} App Store ratings. Splits of ${f.ratio}:1 usually produce a low score — yet the two land just ${f.gapAbs} apart. Neither reflects the ${f.renewalMult}x renewal.`,
     },
     divergenceNote:
       'Both platforms agree the product is good. Neither captures the renewal jump, which is why the computed billing score below disagrees with both.',
@@ -425,6 +525,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'solicited',
+      detail: (f) =>
+        `${f.tpCount} Trustpilot reviews, the ${f.tpCountOrdinal}-largest here, at a ${f.ratio}:1 ratio. Norton invites reviews after support contact, which is legitimate but samples a far happier slice than a page nobody is pointed to.`,
+    },
     divergenceNote:
       'The highest Trustpilot score in the index, built on 87,191 reviews. Norton actively solicits reviews post-support-contact; that is legitimate, but it means this score measures a far more satisfied slice than a page nobody is invited to.',
   },
@@ -459,6 +564,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 4, evidence: 'Solid independent lab detection scores; closed source.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'billing',
+      detail: (f) =>
+        `${f.tpCount} people reached Trustpilot unprompted and wrote about auto-renewal charges and refused refunds. The ${f.appCount} App Store raters were asked inside a working app, and never saw the ${f.renewalMult}x renewal.`,
     },
     divergenceNote:
       'The widest gap in the entire index at 3.42 points. 238,085 people rating the app 4.72 and 3,444 people rating the company 1.3 are not contradicting each other — they are answering different questions, and only one of those questions is about billing.',
@@ -495,6 +605,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'aligned',
+      detail: (f) =>
+        `${f.tpCount} Trustpilot reviews at ${f.ratio}:1 is a full sample rather than a complaints bin, and it lands ${f.gapAbs} from the app.`,
+    },
     divergenceNote:
       'Close agreement across two large samples — the profile of a vendor whose product and billing experience match.',
   },
@@ -529,6 +644,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 4, evidence: 'Repeated independent no-logs audits; client partially open source.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'aligned',
+      detail: (f) =>
+        `${f.appCount} App Store ratings is the largest sample in the index, set against ${f.tpCount} on Trustpilot. At that volume individual grievances stop moving the average and both platforms converge.`,
     },
     divergenceNote:
       'Two of the largest samples in the index, 0.46 apart. When both platforms have hundreds of thousands of data points, they tend to converge.',
@@ -565,6 +685,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'aligned',
+      detail: (f) =>
+        `${f.appCount} and ${f.tpCount}, both large, ${f.gapAbs} apart — and at ${f.tpScore} the highest VPN TrustScore here, earned on a sample big enough to mean it.`,
+    },
     divergenceNote:
       'Strong agreement. Worth noting separately from either score: Kape Technologies also owns Private Internet Access and CyberGhost, so three entries in this index share one parent.',
   },
@@ -600,6 +725,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'aligned',
+      detail: (f) =>
+        `Consistent across ${f.appCount} and ${f.tpCount}. Unusually for a ${f.ratio}:1 split, the smaller sample is not carrying a hidden billing story.`,
+    },
     divergenceNote:
       'Consistent across both platforms. The open-source client and repeatedly court-tested no-logs record are the strongest verification story of any commercial VPN here.',
   },
@@ -634,6 +764,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 5, evidence: 'Open source with recurring published independent audits.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'thin-sample',
+      detail: (f) =>
+        `Both samples are the smallest in the index at ${f.appCount} and ${f.tpCount}, so neither number is stable. A service that refuses to collect an email address has no way to invite anyone to review it.`,
     },
     divergenceNote:
       'The smallest samples in the index on both platforms (1,459 and 187), so both scores are noisy. A privacy tool that refuses to collect an email address also has no way to invite anyone to review it.',
@@ -672,6 +807,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'not-comparable',
+      detail: () =>
+        `No product-level Trustpilot profile exists, so there is no second number to compare. It is also the only entry here that cannot raise your price.`,
+    },
     divergenceNote:
       'The one entry where no comparison is possible — and the only product here that cannot overcharge you at renewal, because it is free and already running.',
   },
@@ -707,6 +847,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
     },
+    gapAnatomy: {
+      driver: 'aligned',
+      detail: (f) =>
+        `Proportionally the ${f.fullnessOrdinal}-fullest Trustpilot sample here at ${f.ratio}:1, and both platforms agree. Neither of them prices in the ${f.renewalMult}x renewal.`,
+    },
     divergenceNote:
       'Both platforms agree the product is strong. Watch the computed billing score below — year two costs more than double year one.',
   },
@@ -741,6 +886,11 @@ export const COMPANY_REVIEWS: CompanyReview[] = [
       audit: { score: 3, evidence: 'Participates in independent lab testing but without the sustained top-tier record of Bitdefender or Norton.' },
       jurisdiction: { score: null, evidence: '' },
       billing: { score: null, evidence: '' },
+    },
+    gapAnatomy: {
+      driver: 'solicited',
+      detail: (f) =>
+        `The only vendor here with more Trustpilot reviews (${f.tpCount}) than App Store ratings (${f.appCount}) — ${f.ratioInverse} of them for every rating. That inversion is what sustained review solicitation looks like, and it sits beside a ${f.renewalMult}x renewal multiplier.`,
     },
     divergenceNote:
       'The most instructive entry on the page. TotalAV carries 139,363 Trustpilot reviews — more than any other vendor here, and more than its own App Store count — at 4.5, while running one of the steepest renewal multipliers in the index. A high TrustScore is a measure of how well a company collects reviews, not of what it charges you in year two.',
@@ -812,13 +962,22 @@ export function billingScore(company: CompanyReview): AssessedScore {
   }
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
-  const sku = company.priceRef ? `${company.priceRef.name} \u2014 ` : '';
+  const sku = company.priceRef ? `${company.priceRef.name} — ` : '';
+
   // VPN intro rates are advertised per month against a multi-year contract, so
-  // the intro figure is that rate annualised (see resolvePricing). Say so,
-  // rather than implying the vendor bills that amount up front.
-  // Only the intro side is a derived figure. The renewal price is quoted
-  // annually by every vendor here, VPNs included.
+  // the intro side is that rate annualised (see resolvePricing) while the
+  // renewal is already quoted annually. Only the intro figure is derived.
   const introPer = company.priceRef?.kind === 'vpn' ? '/yr equivalent' : '/yr';
+
+  // Intro terms here run from a single month to over three years, so "after
+  // the intro term" lands on a different year for every vendor. Name the term
+  // where it is recorded rather than letting the reader assume it is year two.
+  const vpnTerm =
+    company.priceRef?.kind === 'vpn'
+      ? VPN_COMPARE.find((v) => v.name === company.priceRef!.name)?.term
+      : undefined;
+  const termNote = vpnTerm ? ` Intro term: ${vpnTerm}.` : '';
+
   const detail = `${sku}${fmt(pricing.intro)}${introPer} intro → ${fmt(pricing.renew)}/yr at renewal (${mult.toFixed(2)}×).`;
 
   let score: number;
@@ -834,13 +993,15 @@ export function billingScore(company: CompanyReview): AssessedScore {
     verdict = 'A real increase that will surprise people who did not read the fine print.';
   } else if (mult <= 2.5) {
     score = 2;
-    verdict = 'Year two costs roughly double year one.';
+    // Deliberately not "year two": a 2-year prepaid plan has already bought
+    // year two at the intro rate.
+    verdict = 'When the intro term ends, the price roughly doubles.';
   } else {
     score = 1;
     verdict = 'The advertised price bears little relation to what you will actually pay.';
   }
 
-  return { score, evidence: `${detail} ${verdict}` };
+  return { score, evidence: `${detail}${termNote} ${verdict}` };
 }
 
 const ALLIANCE_SCORES: Record<JurisdictionInfo['allianceCategory'], number> = {
@@ -888,6 +1049,75 @@ export function ratingGap(company: CompanyReview): number | null {
   const t = company.trustpilot.score;
   if (a === null || t === null) return null;
   return a - t;
+}
+
+/**
+ * App Store ratings per Trustpilot review. The single most diagnostic number
+ * on this page: a vendor that solicits reviews collects a Trustpilot sample
+ * proportionally close to its app's (TotalAV sits below 1:1), while a vendor
+ * that never asks collects only the aggrieved minority (Bitwarden is 89:1).
+ */
+export function reviewRatio(company: CompanyReview): number | null {
+  const a = company.appStore.reviewCount;
+  const t = company.trustpilot.reviewCount;
+  if (a === null || t === null || t === 0) return null;
+  return a / t;
+}
+
+const ORDINALS = [
+  'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth',
+  'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth',
+  'sixteenth',
+];
+
+/** Companies with both scores, ordered by sample fullness (lowest ratio first). */
+function rankedByFullness(): CompanyReview[] {
+  return COMPANY_REVIEWS.filter((c) => reviewRatio(c) !== null).sort(
+    (a, b) => reviewRatio(a)! - reviewRatio(b)!
+  );
+}
+
+/** Companies with both scores, ordered by Trustpilot review count, largest first. */
+function rankedByTrustpilotCount(): CompanyReview[] {
+  return COMPANY_REVIEWS.filter((c) => c.trustpilot.reviewCount !== null).sort(
+    (a, b) => b.trustpilot.reviewCount! - a.trustpilot.reviewCount!
+  );
+}
+
+const nf = new Intl.NumberFormat('en-US');
+
+/**
+ * Live figures for a company's gap explanation. Ranks are derived rather than
+ * asserted, so a claim like "the third-fullest sample" re-sorts itself when the
+ * underlying counts change instead of silently becoming false.
+ */
+export function gapFacts(company: CompanyReview): GapFacts {
+  const ratio = reviewRatio(company);
+  const gap = ratingGap(company);
+  const mult = renewalMultiplier(company);
+
+  const fullnessIndex = rankedByFullness().findIndex((c) => c.slug === company.slug);
+  const tpCountIndex = rankedByTrustpilotCount().findIndex((c) => c.slug === company.slug);
+
+  return {
+    appScore: company.appStore.score?.toFixed(2).replace(/0$/, '') ?? 'n/a',
+    appCount: company.appStore.reviewCount !== null ? nf.format(company.appStore.reviewCount) : 'n/a',
+    tpScore: company.trustpilot.score?.toFixed(1) ?? 'n/a',
+    tpCount: company.trustpilot.reviewCount !== null ? nf.format(company.trustpilot.reviewCount) : 'n/a',
+    gap: gap === null ? 'n/a' : `${gap > 0 ? '+' : ''}${gap.toFixed(2)}`,
+    gapAbs: gap === null ? 'n/a' : Math.abs(gap).toFixed(2),
+    ratio: ratio === null ? 'n/a' : ratio.toFixed(1).replace(/\.0$/, ''),
+    ratioInverse:
+      ratio === null || ratio === 0 ? 'n/a' : (1 / ratio).toFixed(1).replace(/\.0$/, ''),
+    renewalMult: mult === null ? 'n/a' : mult.toFixed(2),
+    fullnessOrdinal: fullnessIndex >= 0 ? ORDINALS[fullnessIndex] ?? `${fullnessIndex + 1}th` : 'n/a',
+    tpCountOrdinal: tpCountIndex >= 0 ? ORDINALS[tpCountIndex] ?? `${tpCountIndex + 1}th` : 'n/a',
+  };
+}
+
+/** The rendered gap explanation for a company. */
+export function gapDetail(company: CompanyReview): string {
+  return company.gapAnatomy.detail(gapFacts(company));
 }
 
 /** Companies ordered by how violently the two systems disagree. */
