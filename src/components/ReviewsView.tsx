@@ -25,7 +25,10 @@ import {
   RATINGS_AS_OF,
   resolveScores,
   ratingGap,
+  reviewRatio,
   byDivergence,
+  GAP_DRIVER_LABELS,
+  CAUTION_DRIVERS,
   overallScore,
   CompanyReview,
   ProductCategory,
@@ -600,6 +603,8 @@ const DivergenceTable: React.FC<{ onJump: (slug: string) => void }> = ({ onJump 
           {rows.map((c) => {
             const gap = ratingGap(c)!;
             const wide = Math.abs(gap) >= 1;
+            const ratio = reviewRatio(c);
+            const caution = CAUTION_DRIVERS.has(c.gapAnatomy.driver);
             return (
               <tr key={c.slug}>
                 <td className="name">
@@ -647,10 +652,45 @@ const DivergenceTable: React.FC<{ onJump: (slug: string) => void }> = ({ onJump 
                   {gap > 0 ? '+' : ''}
                   {gap.toFixed(2)}
                 </td>
-                <td style={{ whiteSpace: 'normal', minWidth: 260, fontSize: '12px', color: BODY }}>
-                  {wide
-                    ? 'A well-built app attached to a billing or support experience people resent.'
-                    : 'Both samples are large and point the same way.'}
+                <td style={{ whiteSpace: 'normal', minWidth: 300, fontSize: '12px', color: BODY }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 7,
+                      flexWrap: 'wrap',
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '8.5px',
+                        fontWeight: 700,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
+                        padding: '2px 6px',
+                        borderRadius: 2,
+                        color: caution ? '#8A6B2E' : MUTED,
+                        background: caution
+                          ? 'rgba(197,160,89,0.16)'
+                          : 'rgba(26,26,26,0.06)',
+                      }}
+                    >
+                      {GAP_DRIVER_LABELS[c.gapAnatomy.driver]}
+                    </span>
+                    {ratio !== null && (
+                      <span
+                        style={{ fontSize: '10.5px', color: MUTED, whiteSpace: 'nowrap' }}
+                        title="App Store ratings per Trustpilot review"
+                      >
+                        {ratio < 1
+                          ? `1 : ${(1 / ratio).toFixed(1)} sample`
+                          : `${ratio.toFixed(1)} : 1 sample`}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ lineHeight: 1.55 }}>{c.gapAnatomy.detail}</div>
                 </td>
               </tr>
             );
@@ -809,8 +849,11 @@ export const ReviewsView: React.FC = () => {
       </h3>
       <p style={{ fontSize: '13.5px', color: BODY, margin: '0 0 12px', maxWidth: 720, lineHeight: 1.6 }}>
         The widest gaps sit at the top. A gap above one full point almost always means the
-        software is fine and the commercial relationship is not. Select a company to jump to
-        its full breakdown.
+        software is fine and the commercial relationship is not. The sample figure is App
+        Store ratings per Trustpilot review, and it is the most diagnostic number here:
+        a vendor that solicits reviews collects a Trustpilot sample proportionally close to
+        its app&apos;s, while a vendor that never asks collects only the aggrieved minority.
+        Select a company to jump to its full breakdown.
       </p>
       <div className="table-scroll-hint" style={{ marginBottom: 8 }}>
         <MoveHorizontal size={12} /> Scroll the table sideways
