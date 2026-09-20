@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Shield, LayoutGrid, Wallet } from 'lucide-react';
+import { Shield, LayoutGrid, Wallet, Star } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { SplashLoader } from './components/SplashLoader';
 import { ScrollButtons } from './components/ScrollButtons';
 import { AutoFit } from './components/AutoFit';
 import { AdvisorView } from './components/AdvisorView';
 import { CompareView } from './components/CompareView';
+import { ReviewsView } from './components/ReviewsView';
 import { SupportView } from './components/SupportView';
 
 export function App() {
-  const [currentTab, setCurrentTab] = useState<'advisor' | 'compare' | 'support'>(
-    'advisor'
-  );
+  const [currentTab, setCurrentTab] = useState<
+    'advisor' | 'compare' | 'reviews' | 'support'
+  >('advisor');
 
   return (
     <div style={{ backgroundColor: '#F9F7F2', minHeight: '100vh', color: '#1A1A1A' }}>
@@ -126,6 +127,15 @@ export function App() {
 
           <button
             type="button"
+            className={`apptab ${currentTab === 'reviews' ? 'on' : ''}`}
+            onClick={() => setCurrentTab('reviews')}
+          >
+            <Star size={14} />
+            <span>Reviews</span>
+          </button>
+
+          <button
+            type="button"
             className={`apptab ${currentTab === 'support' ? 'on' : ''}`}
             onClick={() => setCurrentTab('support')}
           >
@@ -182,6 +192,7 @@ export function App() {
       <main id="main-content">
         {currentTab === 'advisor' && <AdvisorView />}
         {currentTab === 'compare' && <CompareView />}
+        {currentTab === 'reviews' && <ReviewsView />}
         {currentTab === 'support' && <SupportView />}
       </main>
 
