@@ -599,3 +599,31 @@ td.name {
     scroll-behavior: auto !important;
   }
 }
+
+/* Reviews View — App Store vs Trustpilot faceoff.
+   The three panels sit side by side on desktop. Once they wrap onto separate
+   rows the gap column would otherwise stay a narrow stub floating at the left
+   edge, so it goes full-width and becomes a divider between the two scores. */
+.faceoff-gap {
+  flex: 0 0 auto;
+  min-width: 104px;
+  border-left: 1px solid rgba(26, 26, 26, 0.1);
+  border-right: 1px solid rgba(26, 26, 26, 0.1);
+}
+
+@media (max-width: 719px) {
+  .faceoff-gap {
+    flex: 1 1 100%;
+    flex-direction: row;
+    gap: 10px;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid rgba(26, 26, 26, 0.1);
+    border-bottom: 1px solid rgba(26, 26, 26, 0.1);
+    padding: 10px 18px;
+    justify-content: flex-start;
+  }
+  .faceoff-gap > div {
+    margin-top: 0 !important;
+  }
+}
