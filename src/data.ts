@@ -804,10 +804,22 @@ export const SUITES: Suite[] = [
 export interface VPNCompareItem {
   name: string;
   url: string;
+  /**
+   * Advertised intro rate per month. This must reconcile with the other two
+   * pricing fields: introMo x (months implied by `term`) should equal
+   * `firstBill`, give or take the cent or two vendors round off the monthly
+   * figure. These three are shown together in the Compare tab, so a row that
+   * does not reconcile contradicts itself on screen. The Reviews tab also
+   * annualises this field to compute its billing-transparency score.
+   */
   introMo: number;
+  /** Length of the intro term, e.g. "2 yr + 3 mo". Free months included. */
   term: string;
+  /** Total charged up front to cover the whole intro term. */
   firstBill: number;
+  /** Cost of one year once the intro term ends. */
   renewYr: number;
+  /** Rate if billed month to month with no commitment. */
   monthlyMo: number;
   devices: string;
   blocker: string;
@@ -822,7 +834,7 @@ export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Surfshark Starter",
     url: "https://surfshark.com/pricing",
-    introMo: 2.49,
+    introMo: 1.99,
     term: "2 yr + 3 mo",
     firstBill: 53.73,
     renewYr: 79,
@@ -966,7 +978,7 @@ export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Private Internet Access",
     url: "https://www.privateinternetaccess.com/buy-vpn-online",
-    introMo: 2.19,
+    introMo: 2.03,
     term: "3 yr + 3 mo",
     firstBill: 79,
     renewYr: 56.16,
