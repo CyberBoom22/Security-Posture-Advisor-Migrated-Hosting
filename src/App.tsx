@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, LayoutGrid, Wallet, Star, Newspaper } from 'lucide-react';
+import { Shield, LayoutGrid, Wallet, Star, Tag } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { SplashLoader } from './components/SplashLoader';
 import { ScrollButtons } from './components/ScrollButtons';
@@ -7,12 +7,12 @@ import { AutoFit } from './components/AutoFit';
 import { AdvisorView } from './components/AdvisorView';
 import { CompareView } from './components/CompareView';
 import { ReviewsView } from './components/ReviewsView';
-import { DispatchView } from '@dispatch';
+import { SalesView } from './components/SalesView';
 import { SupportView } from './components/SupportView';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<
-    'advisor' | 'compare' | 'reviews' | 'dispatch' | 'support'
+    'advisor' | 'compare' | 'reviews' | 'sales' | 'support'
   >('advisor');
 
   return (
@@ -135,16 +135,14 @@ export function App() {
             <span>Reviews</span>
           </button>
 
-          {__SHOW_DISPATCH__ && (
-            <button
-              type="button"
-              className={`apptab ${currentTab === 'dispatch' ? 'on' : ''}`}
-              onClick={() => setCurrentTab('dispatch')}
-            >
-              <Newspaper size={14} />
-              <span>Dispatch</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className={`apptab ${currentTab === 'sales' ? 'on' : ''}`}
+            onClick={() => setCurrentTab('sales')}
+          >
+            <Tag size={14} />
+            <span>Sales</span>
+          </button>
 
           <button
             type="button"
@@ -205,7 +203,7 @@ export function App() {
         {currentTab === 'advisor' && <AdvisorView />}
         {currentTab === 'compare' && <CompareView />}
         {currentTab === 'reviews' && <ReviewsView />}
-        {__SHOW_DISPATCH__ && currentTab === 'dispatch' && <DispatchView />}
+        {currentTab === 'sales' && <SalesView />}
         {currentTab === 'support' && <SupportView />}
       </main>
 

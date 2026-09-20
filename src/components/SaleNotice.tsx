@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tag, ExternalLink, Clock } from 'lucide-react';
 import {
-  activePromotions,
+  announcedPromotions,
   durationLabel,
   endingSoon,
   Promotion,
@@ -26,7 +26,7 @@ const RULE = 'rgba(26, 26, 26, 0.1)';
  * cannot leave a dead offer on the page.
  */
 export const SaleNotice: React.FC = () => {
-  const promos = activePromotions();
+  const promos = announcedPromotions();
   if (promos.length === 0) return null;
 
   const soon = promos.filter((p) => endingSoon(p));
@@ -130,9 +130,9 @@ export const SaleNotice: React.FC = () => {
         }}
       >
         A sale changes the intro price only. Every renewal figure in the tables below is
-        what you pay once it ends, and those do not move when a sale does. We take no
-        commission on any of this — confirm the current terms on the vendor&apos;s own page
-        before buying.
+        what you pay once it ends, and those do not move when a sale does. Full details,
+        including what each one renews at, are on the Sales tab. We take no commission on
+        any of this.
       </p>
     </section>
   );
