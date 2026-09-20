@@ -26,6 +26,7 @@ import {
   resolveScores,
   ratingGap,
   reviewRatio,
+  gapDetail,
   byDivergence,
   GAP_DRIVER_LABELS,
   CAUTION_DRIVERS,
@@ -690,7 +691,7 @@ const DivergenceTable: React.FC<{ onJump: (slug: string) => void }> = ({ onJump 
                       </span>
                     )}
                   </div>
-                  <div style={{ lineHeight: 1.55 }}>{c.gapAnatomy.detail}</div>
+                  <div style={{ lineHeight: 1.55 }}>{gapDetail(c)}</div>
                 </td>
               </tr>
             );
