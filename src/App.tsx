@@ -7,7 +7,7 @@ import { AutoFit } from './components/AutoFit';
 import { AdvisorView } from './components/AdvisorView';
 import { CompareView } from './components/CompareView';
 import { ReviewsView } from './components/ReviewsView';
-import { DispatchView } from './components/DispatchView';
+import { DispatchView } from '@dispatch';
 import { SupportView } from './components/SupportView';
 
 export function App() {
@@ -135,14 +135,16 @@ export function App() {
             <span>Reviews</span>
           </button>
 
-          <button
-            type="button"
-            className={`apptab ${currentTab === 'dispatch' ? 'on' : ''}`}
-            onClick={() => setCurrentTab('dispatch')}
-          >
-            <Newspaper size={14} />
-            <span>Dispatch</span>
-          </button>
+          {__SHOW_DISPATCH__ && (
+            <button
+              type="button"
+              className={`apptab ${currentTab === 'dispatch' ? 'on' : ''}`}
+              onClick={() => setCurrentTab('dispatch')}
+            >
+              <Newspaper size={14} />
+              <span>Dispatch</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -203,7 +205,7 @@ export function App() {
         {currentTab === 'advisor' && <AdvisorView />}
         {currentTab === 'compare' && <CompareView />}
         {currentTab === 'reviews' && <ReviewsView />}
-        {currentTab === 'dispatch' && <DispatchView />}
+        {__SHOW_DISPATCH__ && currentTab === 'dispatch' && <DispatchView />}
         {currentTab === 'support' && <SupportView />}
       </main>
 

@@ -34,6 +34,7 @@ import {
   UserRegion,
 } from './JurisdictionDetails';
 import { JurisdictionMatrixView } from './JurisdictionMatrixView';
+import { SaleNotice } from './SaleNotice';
 
 // Shared Section Intro
 const SectionIntro: React.FC<{ title: string; body: string }> = ({
@@ -224,6 +225,8 @@ export const CompareView: React.FC = () => {
       }}
     >
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px' }}>
+        <SaleNotice />
+
         {/* Page Header */}
         <div style={{ marginBottom: 28 }}>
           <div
