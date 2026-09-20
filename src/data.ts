@@ -834,9 +834,9 @@ export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Surfshark Starter",
     url: "https://surfshark.com/pricing",
-    introMo: 1.99,
+    introMo: 2.49,
     term: "2 yr + 3 mo",
-    firstBill: 53.73,
+    firstBill: 67.23,
     renewYr: 79,
     monthlyMo: 15.45,
     devices: "Unlimited",
@@ -978,9 +978,9 @@ export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Private Internet Access",
     url: "https://www.privateinternetaccess.com/buy-vpn-online",
-    introMo: 2.03,
+    introMo: 1.79,
     term: "3 yr + 3 mo",
-    firstBill: 79,
+    firstBill: 69.81,
     renewYr: 56.16,
     monthlyMo: 11.95,
     devices: "Unlimited",
