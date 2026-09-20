@@ -6,7 +6,6 @@ import {
   ArrowRight,
   ShieldAlert,
   Hourglass,
-  CalendarCheck,
 } from 'lucide-react';
 import {
   announcedPromotions,
@@ -15,8 +14,6 @@ import {
   endingSoon,
   savingPercent,
   renewalMultiple,
-  REQUIRED_SCANS,
-  scanDaysLabel,
   Promotion,
 } from '../promotions';
 import { VPN_COMPARE, AV_COMPARE, termMonths } from '../data';
@@ -288,32 +285,9 @@ export const SalesView: React.FC = () => {
       >
         Which security tools are discounted, what the sale actually costs, how long it
         runs, and — the part the vendor puts in smaller type — what it renews at once the
-        sale is over. We take no commission on any of this, and a sale appearing here is
-        not a recommendation.
+        sale is over. Every listing is checked against the vendor&apos;s own page before it
+        appears. We take no commission, and a sale here is not a recommendation.
       </p>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: 9,
-          alignItems: 'flex-start',
-          background: CARD,
-          border: `1px solid ${RULE}`,
-          borderLeft: `3px solid ${GOLD}`,
-          borderRadius: 4,
-          padding: '12px 16px',
-          marginBottom: 26,
-        }}
-      >
-        <CalendarCheck size={14} style={{ color: '#8A6B2E', flexShrink: 0, marginTop: 2 }} />
-        <div style={{ fontSize: '12px', color: BODY, lineHeight: 1.6 }}>
-          <strong style={{ color: INK }}>Nothing is announced on first sighting.</strong> An
-          automated check runs on the {scanDaysLabel()} of each month, and a sale
-          appears here only after {REQUIRED_SCANS} separate scans have seen it. A flash
-          promotion or a regional price quirk expires before it clears that bar. Sales with a published end date
-          disappear from this page on their own once it passes.
-        </div>
-      </div>
 
       {announced.length > 0 ? (
         announced.map((p) => <SaleCard key={`${p.vendor}-${p.product}`} promo={p} />)
@@ -343,14 +317,11 @@ export const SalesView: React.FC = () => {
             {pending.length > 0 ? (
               <>
                 {pending.length} {pending.length === 1 ? 'discount is' : 'discounts are'}{' '}
-                currently being tracked, but none has been seen by {REQUIRED_SCANS} scans
-                yet. They will be announced here once they have, and not before — a
-                discount that vanishes between scans was never worth telling you about.
+                being checked and will appear here once confirmed.
               </>
             ) : (
               <>
-                The last scan found no discounts running on any tool in this index. Nothing
-                is being withheld; there is simply nothing on sale.
+                Nothing in this index is currently discounted.
               </>
             )}
           </p>
@@ -389,10 +360,9 @@ export const SalesView: React.FC = () => {
           borderTop: `1px solid ${RULE}`,
         }}
       >
-        Prices are read from each vendor&apos;s own page and confirmed across multiple
-        scans before publication, but promotions change without notice and can vary by
-        country. Confirm the current terms on the vendor&apos;s page before you buy. No
-        affiliate links, no sponsorships, no commission.
+        Promotions change without notice and can vary by country. Confirm the current
+        terms on the vendor&apos;s page before you buy. No affiliate links, no
+        sponsorships, no commission.
       </p>
     </div>
   );
