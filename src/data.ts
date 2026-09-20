@@ -830,6 +830,23 @@ export interface VPNCompareItem {
   limits: string[];
 }
 
+/**
+ * Months covered by an intro term string such as "2 yr + 3 mo" or
+ * "3 yr + 3 mo". Free months count, because the subscriber is not billed
+ * again until they are used up. Returns null when the term is not a fixed
+ * length (Mullvad bills month to month and never changes).
+ *
+ * The pricing audit and the Reviews tab both need this, and it is the check
+ * that catches a stale row: introMo x termMonths should equal firstBill.
+ */
+export function termMonths(term: string): number | null {
+  if (/flat monthly|no contract/i.test(term)) return 1;
+  const years = term.match(/(\d+)\s*yr/i);
+  const months = term.match(/\+\s*(\d+)\s*mo/i);
+  if (!years && !months) return null;
+  return (years ? Number(years[1]) * 12 : 0) + (months ? Number(months[1]) : 0);
+}
+
 export const VPN_COMPARE: VPNCompareItem[] = [
   {
     name: "Surfshark Starter",
