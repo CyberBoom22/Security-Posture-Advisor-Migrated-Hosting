@@ -192,7 +192,7 @@ export function App() {
           </strong>
           <span>
             Created to encourage sensible household security postures without commercial bias.
-            Unaffiliated with all vendors mentioned — zero affiliate commissions, zero sponsorships.
+            Unaffiliated with all vendors mentioned — zero sponsorships. There is exactly one affiliate link on this site, shown in the household plan for Asurion Complete Protect, and it is disclosed where it appears. No other link earns a commission.
             Pricing audited three times a month to uncover real renewal costs.
           </span>
         </div>
@@ -232,7 +232,7 @@ export function App() {
         >
           <div style={{ maxWidth: 680 }}>
             Published as a free public resource. Security Hub is not affiliated with, endorsed by,
-            or compensated by any company reviewed. Prices and feature matrices are refreshed
+            or sponsored by any company reviewed. The one affiliate link on this site, in the household plan for Asurion Complete Protect, is disclosed where it appears. Prices and feature matrices are refreshed
             regularly from verified public documentation — confirm current terms directly with
             providers before transaction.
           </div>

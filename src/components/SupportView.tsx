@@ -78,7 +78,7 @@ export const SupportView: React.FC = () => {
             fontStyle: 'italic',
           }}
         >
-          Donations sustain weekly pricing verification and honest analysis — keeping this tool 100% free from affiliate links and vendor kickbacks.
+          Donations sustain weekly pricing verification and honest analysis — keeping this tool free from sponsorships and vendor kickbacks. There is exactly one affiliate link on this site, shown in the household plan for Asurion Complete Protect, and it is disclosed where it appears. No other link earns a commission.
         </p>
 
         <div>
@@ -129,8 +129,7 @@ export const SupportView: React.FC = () => {
             lineHeight: 1.6,
           }}
         >
-          Contributions are strictly voluntary. Security Hub maintains zero commercial affiliations,
-          sponsored placements, or affiliate cookies. Upkeep directly covers hosting, domain registration,
+          Contributions are strictly voluntary. Security Hub takes no sponsorships or sponsored placements. There is exactly one affiliate link on this site, shown in the household plan for Asurion Complete Protect, and it is disclosed where it appears. No other link earns a commission. Upkeep directly covers hosting, domain registration,
           and ongoing manual pricing audits.
         </div>
       </div>

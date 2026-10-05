@@ -386,6 +386,20 @@ export const AV_SUITES: AVSuite[] = [
     note: "5 devices; bundles VPN + password manager." },
 ];
 
+// Advisor-only bundle option. Deliberately not part of SUITES, the compare
+// matrices, the reviews index or the sales tracker.
+export const ASURION_BUNDLE = {
+  name: "Asurion Complete Protect (Amazon)",
+  monthly: 16.99,
+  deviceCap: 5,
+  bundledProduct: "Norton 360 Deluxe",
+  sourceUrl: "https://www.asurion.com/press-releases/asurion-expands-complete-protect-on-amazon/",
+  affiliateUrl: "https://amzn.to/4hIpoqX",
+  ctaLabel: "Get it on Amazon",
+  affiliateDisclosure: "Affiliate link: the site owner earns a small commission if you buy through it, at no extra cost to you. This is the only affiliate link on this site. The owner has used this protection plan and had good experiences with it, and this helps support the site.",
+  amazonAssociateStatement: "As an Amazon Associate I earn from qualifying purchases.",
+};
+
 export interface VPNChoice {
   id: string;
   name: string;

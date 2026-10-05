@@ -12,8 +12,9 @@
 // it ever reaches a visitor. An entry below the threshold is tracked but
 // invisible.
 //
-// This site takes no commission. A sale is not a recommendation, and the only
-// reason to surface one is timing: an intro price seen during a sale is not
+// No sale listed here earns a commission (the site's one affiliate link is in the
+// advisor's household plan, not here). A sale is not a recommendation, and the
+// only reason to surface one is timing: an intro price seen during a sale is not
 // the price at renewal, and the renewal figure is the one that matters.
 
 export interface Promotion {

@@ -21,6 +21,7 @@ import {
   VPN_BLOCKERS,
   AV_SUITES,
   VPN_CHOICES,
+  ASURION_BUNDLE,
 } from '../data';
 
 export const AdvisorView: React.FC = () => {
@@ -38,6 +39,8 @@ export const AdvisorView: React.FC = () => {
   const [vpnChoice, setVpnChoice] = useState<string | null>(null);
   const [wantMobileAV, setWantMobileAV] = useState(true);
   const [wantDesktopAV, setWantDesktopAV] = useState(true);
+  const [buysOnAmazon, setBuysOnAmazon] = useState(false);
+  const [amazonSpend, setAmazonSpend] = useState(500);
   const [submitted, setSubmitted] = useState(false);
 
   const devices = mobileDevices + desktopDevices;
@@ -135,6 +138,87 @@ export const AdvisorView: React.FC = () => {
     const total = +(yearlyIntro / 12).toFixed(2);
     const monthlyRenew = +(yearlyRenew / 12).toFixed(2);
     const overBudget = total > budget;
+
+    // Optional alternative path: Asurion Complete Protect (Amazon bundle).
+    // Only considered when the user buys on Amazon. It replaces the VPN line and
+    // the antivirus line for up to its device cap; any devices beyond the cap
+    // fall back to the standalone suite choice. The password manager line is
+    // kept because the bundled Norton's password manager is not confirmed.
+    let asurion: null | {
+      lineItems: LineItem[];
+      remainderAgents: number;
+      remainderSuite: (typeof AV_SUITES)[number] | null;
+      total: number;
+      monthlyRenew: number;
+      yearlyIntro: number;
+      yearlyRenew: number;
+      overBudget: boolean;
+      steps: { title: string; body: string }[];
+    } = null;
+    if (buysOnAmazon) {
+      const remainderAgents = Math.max(0, agentsNeeded - ASURION_BUNDLE.deviceCap);
+      const remainderSuite =
+        remainderAgents > 0
+          ? AV_SUITES.find((s) => s.deviceCap === null || remainderAgents <= s.deviceCap) ||
+            AV_SUITES[0]
+          : null;
+      const aItems: LineItem[] = [
+        { label: vault.name, url: vault.url, price: vault.price, pending: false },
+      ];
+      if (hasOverflow) {
+        aItems.push({
+          label: `Free accounts × ${overflowAdults} (extra adults)`,
+          url: FREE_TIER_URL,
+          price: { intro: 0, renew: 0, monthly: null, term: 'free' },
+          pending: false,
+        });
+      }
+      const bundleYear = +(ASURION_BUNDLE.monthly * 12).toFixed(2);
+      aItems.push({
+        label: ASURION_BUNDLE.name,
+        url: ASURION_BUNDLE.sourceUrl,
+        price: { intro: bundleYear, renew: bundleYear, monthly: ASURION_BUNDLE.monthly, term: 'monthly' },
+        pending: false,
+      });
+      if (remainderSuite) {
+        aItems.push({
+          label: `${remainderSuite.name} (remaining ${remainderAgents} device${remainderAgents > 1 ? 's' : ''})`,
+          url: remainderSuite.url,
+          price: remainderSuite.price,
+          pending: false,
+        });
+      }
+      const aIntro = aItems.reduce((acc, i) => acc + (i.price.intro || 0), 0);
+      const aRenew = aItems.reduce((acc, i) => acc + (i.price.renew || 0), 0);
+      const aTotal = +(aIntro / 12).toFixed(2);
+      const aSteps: { title: string; body: string }[] = [
+        {
+          title: 'Enroll in Complete Protect through Amazon',
+          body: 'Use the Amazon link above and subscribe to Asurion Complete Protect from your Amazon account. Billing is monthly and you can cancel anytime from the same Amazon account.',
+        },
+        {
+          title: `Activate ${ASURION_BUNDLE.bundledProduct} through your Asurion/Norton account`,
+          body: `After enrolling, follow the activation instructions from Asurion to create or sign in to your Norton account, then install it on up to ${ASURION_BUNDLE.deviceCap} devices. Turn on real-time scanning and the VPN.`,
+        },
+      ];
+      if (remainderSuite) {
+        aSteps.push({
+          title: `Cover the remaining ${remainderAgents} device${remainderAgents > 1 ? 's' : ''} with ${remainderSuite.name}`,
+          body: `The bundle covers up to ${ASURION_BUNDLE.deviceCap} devices. Install ${remainderSuite.name} on the rest, the same way the standalone path does.`,
+        });
+      }
+      asurion = {
+        lineItems: aItems,
+        remainderAgents,
+        remainderSuite,
+        total: aTotal,
+        monthlyRenew: +(aRenew / 12).toFixed(2),
+        yearlyIntro: aIntro,
+        yearlyRenew: aRenew,
+        overBudget: aTotal > budget,
+        steps: aSteps,
+      };
+    }
 
     // Steps Generation
     const steps: { title: string; body: string }[] = [];
@@ -251,6 +335,7 @@ export const AdvisorView: React.FC = () => {
       monthlyRenew,
       overBudget,
       steps,
+      asurion,
     };
   }, [
     mobileDevices,
@@ -265,6 +350,7 @@ export const AdvisorView: React.FC = () => {
     vpnChoice,
     wantMobileAV,
     wantDesktopAV,
+    buysOnAmazon,
     budget,
   ]);
 
@@ -639,6 +725,55 @@ export const AdvisorView: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Half-width Card: Amazon purchases */}
+          <div className="advisor-card">
+            <div className="field-label">
+              <Wallet size={14} />
+              <span>Do you regularly buy electronics, appliances, or furniture on Amazon?</span>
+            </div>
+            <div className="seg" style={{ maxWidth: 220 }}>
+              <button
+                type="button"
+                className={buysOnAmazon ? 'on' : ''}
+                onClick={() => setBuysOnAmazon(true)}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                className={!buysOnAmazon ? 'on' : ''}
+                onClick={() => setBuysOnAmazon(false)}
+              >
+                No
+              </button>
+            </div>
+          </div>
+
+          {/* Half-width Card: Amazon annual spend (only when Yes) */}
+          {buysOnAmazon && (
+            <div className="advisor-card">
+              <div className="field-label">
+                <Wallet size={14} />
+                <span>Approx. yearly Amazon spend on those purchases</span>
+              </div>
+              <div className="num" style={{ marginBottom: 12 }}>
+                ${amazonSpend.toLocaleString('en-US')}
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={5000}
+                step={100}
+                value={amazonSpend}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setAmazonSpend(Number.isNaN(val) ? 0 : Math.max(0, Math.min(5000, val)));
+                }}
+                aria-label="Yearly Amazon spend on electronics, appliances and furniture"
+              />
+            </div>
+          )}
         </div>
 
         {/* Go button */}
@@ -1263,6 +1398,196 @@ export const AdvisorView: React.FC = () => {
                   : `Plan totals ~$${plan.total}/mo, comfortably within your $${budget}/mo envelope. Annual terms preserve maximum savings.`}
               </div>
             </div>
+
+            {/* Alternative path: Asurion Complete Protect (only when buying on Amazon) */}
+            {plan.asurion && (
+              <div style={{ marginTop: 32 }}>
+                <div
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.25em',
+                    textTransform: 'uppercase',
+                    color: '#C5A059',
+                    marginBottom: 4,
+                  }}
+                >
+                  Alternative Path // Bundle
+                </div>
+                <h3
+                  style={{
+                    fontFamily: "'Newsreader', 'Spectral', serif",
+                    fontSize: '24px',
+                    fontWeight: 500,
+                    margin: '0 0 12px',
+                    color: '#1A1A1A',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Option: {ASURION_BUNDLE.name}
+                </h3>
+
+                <div className="advisor-card" style={{ padding: '18px 24px' }}>
+                  <p style={{ fontSize: 14, color: '#4A4A4A', margin: '0 0 10px', lineHeight: 1.6 }}>
+                    An Amazon purchase-protection plan that includes {ASURION_BUNDLE.bundledProduct} (antivirus,
+                    malware and ransomware protection, AI scam protection, secure VPN, up to{' '}
+                    {ASURION_BUNDLE.deviceCap} devices). ${ASURION_BUNDLE.monthly}/month + tax, billed
+                    monthly, so there is no intro-to-renewal jump. It also has $0 service fees, a $5,000
+                    annual claim limit, no claim waiting period, in-person services at about 700
+                    uBreakiFix locations, and a $100/yr care credit for furniture and major appliances
+                    bought on Amazon. This is an alternative to compare, not an automatic pick.
+                  </p>
+
+                  {/* Side-by-side totals */}
+                  <div className="two-col" style={{ gap: 12, margin: '14px 0' }}>
+                    {[
+                      {
+                        title: 'Standalone path (plan above)',
+                        total: plan.total,
+                        renew: plan.monthlyRenew,
+                        yearlyIntro: plan.yearlyIntro,
+                        yearlyRenew: plan.yearlyRenew,
+                        over: plan.overBudget,
+                      },
+                      {
+                        title: `With ${ASURION_BUNDLE.name}`,
+                        total: plan.asurion.total,
+                        renew: plan.asurion.monthlyRenew,
+                        yearlyIntro: plan.asurion.yearlyIntro,
+                        yearlyRenew: plan.asurion.yearlyRenew,
+                        over: plan.asurion.overBudget,
+                      },
+                    ].map((col) => (
+                      <div
+                        key={col.title}
+                        style={{
+                          border: '1px solid rgba(26, 26, 26, 0.1)',
+                          borderRadius: 4,
+                          padding: '12px 14px',
+                        }}
+                      >
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>
+                          {col.title}
+                        </div>
+                        <div style={{ fontSize: 13.5, color: '#1A1A1A' }}>
+                          <strong>${col.total}/mo</strong> intro · ${col.yearlyIntro.toFixed(2)}/yr
+                        </div>
+                        <div style={{ fontSize: 13.5, color: '#C5A059' }}>
+                          <strong>${col.renew}/mo</strong> renewal · ${col.yearlyRenew.toFixed(2)}/yr
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            marginTop: 4,
+                            color: col.over ? '#A34E36' : '#1E7A46',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {col.over
+                            ? `Exceeds your $${budget}/mo target`
+                            : `Within your $${budget}/mo target`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 12, color: '#767064', margin: '0 0 12px' }}>
+                    Both totals exclude sales tax. The bundle replaces the VPN and antivirus lines for up to{' '}
+                    {ASURION_BUNDLE.deviceCap} devices
+                    {plan.asurion.remainderSuite
+                      ? `; the remaining ${plan.asurion.remainderAgents} device${plan.asurion.remainderAgents > 1 ? 's' : ''} use ${plan.asurion.remainderSuite.name}`
+                      : ''}
+                    . Your password manager line stays: whether the bundled Norton includes a password
+                    manager, parental controls, cloud backup or dark web monitoring is not confirmed.
+                    {routerVpn === 'yes' &&
+                      ' The bundled VPN is installed per device, so it would not replace a router-level VPN.'}
+                  </p>
+
+                  {/* Plain-language caveats */}
+                  <div className="grid-h" style={{ marginBottom: 6 }}>Read before choosing</div>
+                  <ul
+                    style={{
+                      margin: '0 0 12px 18px',
+                      padding: 0,
+                      fontSize: 13.5,
+                      color: '#4A4A4A',
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    <li>The Norton benefit ends if the Asurion subscription is cancelled.</li>
+                    <li>The protection covers Amazon purchases only.</li>
+                    <li>
+                      It mainly makes sense if your household would otherwise pay for product
+                      protection on Amazon purchases. You said you spend roughly $
+                      {amazonSpend.toLocaleString('en-US')}/yr on electronics, appliances and furniture
+                      there; that figure is context only, not a threshold.
+                    </li>
+                    <li>
+                      How far back past Amazon purchases are covered is not confirmed (sources say 90
+                      days or 12 months). Check Asurion&apos;s terms before relying on it.
+                    </li>
+                  </ul>
+
+                  {/* Rollout steps for this option */}
+                  <div className="grid-h" style={{ marginBottom: 6 }}>Rollout if you choose this option</div>
+                  <div style={{ marginBottom: 14 }}>
+                    {plan.asurion.steps.map((step, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: 12, paddingBottom: 12 }}>
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            background: '#1A1A1A',
+                            color: '#F9F7F2',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>
+                            {step.title}
+                          </div>
+                          <div style={{ fontSize: 13.5, color: '#4A4A4A', lineHeight: 1.55 }}>
+                            {step.body}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Affiliate call-to-action with adjacent disclosure */}
+                  <div style={{ borderTop: '1px solid rgba(26, 26, 26, 0.1)', paddingTop: 12 }}>
+                    <a
+                      href={ASURION_BUNDLE.affiliateUrl}
+                      target="_blank"
+                      rel="sponsored noopener noreferrer"
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        color: '#1A1A1A',
+                        textDecoration: 'none',
+                        borderBottom: '1px solid #C5A059',
+                        display: 'inline-block',
+                      }}
+                    >
+                      {ASURION_BUNDLE.ctaLabel} ↗
+                    </a>
+                    <div style={{ fontSize: 12, color: '#6B655C', marginTop: 6, lineHeight: 1.5 }}>
+                      {ASURION_BUNDLE.affiliateDisclosure}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6B655C', marginTop: 2 }}>
+                      {ASURION_BUNDLE.amazonAssociateStatement}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Cost summary table */}
             <div style={{ marginTop: 32 }}>
