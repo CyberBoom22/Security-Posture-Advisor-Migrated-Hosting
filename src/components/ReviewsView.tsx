@@ -796,7 +796,7 @@ export const ReviewsView: React.FC = () => {
           Every figure links to its source so you can check it. The eight category scores
           are our own editorial assessment against a published rubric — two of them are
           computed directly from this site&apos;s pricing and jurisdiction research rather
-          than judged. Still no affiliate links, and no vendor has seen this page.
+          than judged. No vendor has seen this page, and no review score or rating here earns a commission. There is exactly one affiliate link on this site, shown in the household plan for Asurion Complete Protect, and it is disclosed where it appears. No other link earns a commission.
         </div>
       </div>
 

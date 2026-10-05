@@ -17,8 +17,8 @@ const RULE = 'rgba(26, 26, 26, 0.1)';
  * Tells a visitor which prices on this page are temporary.
  *
  * It says a sale is running and how long it lasts, and nothing else. No
- * countdown timers, no "act now", no links framed as offers — this site takes
- * no commission and a sale is not a recommendation. The only reason a shopper
+ * countdown timers, no "act now", no links framed as offers — no sale earns a
+ * commission and a sale is not a recommendation. The only reason a shopper
  * needs this is timing: an intro price seen during a sale is not the price at
  * renewal, and the renewal figure is the one in the tables below.
  *
@@ -132,7 +132,7 @@ export const SaleNotice: React.FC = () => {
         A sale changes the intro price only. Every renewal figure in the tables below is
         what you pay once it ends, and those do not move when a sale does. Full details,
         including what each one renews at, are on the Sales tab. We take no commission on
-        any of this.
+        any of these sales.
       </p>
     </section>
   );

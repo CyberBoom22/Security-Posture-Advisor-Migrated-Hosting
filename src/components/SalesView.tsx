@@ -286,7 +286,7 @@ export const SalesView: React.FC = () => {
         Which security tools are discounted, what the sale actually costs, how long it
         runs, and — the part the vendor puts in smaller type — what it renews at once the
         sale is over. Every listing is checked against the vendor&apos;s own page before it
-        appears. We take no commission, and a sale here is not a recommendation.
+        appears. We take no commission on any sale listed here, and a sale here is not a recommendation.
       </p>
 
       {announced.length > 0 ? (
@@ -361,8 +361,7 @@ export const SalesView: React.FC = () => {
         }}
       >
         Promotions change without notice and can vary by country. Confirm the current
-        terms on the vendor&apos;s page before you buy. No affiliate links, no
-        sponsorships, no commission.
+        terms on the vendor&apos;s page before you buy. No sponsorships. There is exactly one affiliate link on this site, shown in the household plan for Asurion Complete Protect, and it is disclosed where it appears. No other link earns a commission.
       </p>
     </div>
   );
